@@ -10,6 +10,7 @@
 #include <cv.h>
 #include <highgui.h>
 #include <iostream>
+#include <map>
 #include "SingleImageComps.h"
 #ifndef IMAGE_H_
 #define IMAGE_H_
@@ -25,6 +26,7 @@ class Image {
 	vector<vector<Point> > contours2;
 	vector<Vec4i> hierarchy2;
 	double CenX1, CenY1, CenX2, CenY2;
+	int Map1to2[];
 
 public:
     Image(Mat, Mat);
@@ -81,34 +83,33 @@ void Image :: Normalize()
 	multiply(mask,methods,methods,1);
 	threshold(methods,methods,0.5,1.0,THRESH_BINARY);
 	threshold(grndtrth,grndtrth,0.5,1.0,THRESH_BINARY);
-
+//	threshold(methods,methods,127,255,THRESH_BINARY);
+//	threshold(grndtrth,grndtrth,127,255,THRESH_BINARY);
 }
 
 void Image :: Labeling()
 {
-
-
     vector <vector <Point2i> > blobs1;
     vector <vector <Point2i> > blobs2;
     Mat NormMethods, NormGrndtrth;
-    NormMethods = SingleImageComps(methods,blobs1);
-    NormGrndtrth = SingleImageComps(grndtrth,blobs2);
+    NormMethods = SingleImageComps(methods,blobs2);
+    NormGrndtrth = SingleImageComps(grndtrth,blobs1);
 
     methods = NormMethods;
     grndtrth = NormGrndtrth;
-
 }
 
 void Image :: ImageStats()
 {
-	  findContours(methods,contours1,hierarchy1,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
-	  findContours(grndtrth,contours2,hierarchy2,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
+	findContours(grndtrth,contours1,hierarchy1,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
+	findContours(methods,contours2,hierarchy2,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
+
 
 	  int idx1 = 0;
 	        for( ; idx1 >= 0; idx1 = hierarchy1[idx1][0] )
 	         {
 	            Scalar color( rand()&255, rand()&255, rand()&255 );
-	            drawContours( methods, contours1, idx1, color, CV_FILLED, 8, hierarchy1 );
+	            drawContours( grndtrth, contours1, idx1, color, CV_FILLED, 8, hierarchy1 );
 	        }
 
 
@@ -116,14 +117,9 @@ void Image :: ImageStats()
 	        for( ; idx2 >= 0; idx2 = hierarchy2[idx2][0] )
 	         {
 	             Scalar color( rand()&255, rand()&255, rand()&255 );
-	             drawContours( grndtrth, contours2, idx2, color, CV_FILLED, 8, hierarchy2 );
-
+	             drawContours( methods, contours2, idx2, color, CV_FILLED, 8, hierarchy2 );
 	         }
-
 }
-
-
-
 
 void Image :: CentroidConstraint()
 {
@@ -164,32 +160,50 @@ void Image :: CentroidConstraint()
                    }
 
 
-
+                double MinCent;
+                double MinimumCentroid[contours1.size()];
+                double TempCent[contours2.size()];
+                int TempIndex;
+                int index;
+                int Map1to2[contours1.size()];
 
                 for(unsigned int a = 0; a < contours1.size(); a++)
+                {
                 	for (unsigned int  b = 0; b < contours2.size(); b++)
                 	   {
-
                 		CenX1 = centroid1[a].x;
                 		CenY1 = centroid1[a].y;
                 		CenX2 = centroid2[b].x;
                 		CenY2 = centroid2[b].y;
                 		complex<double> ComplexDist((CenX1-CenX2),(CenY1-CenY2));
                 		double CentDist = abs(ComplexDist);
-            //		   	double CentAng = arg(ComplexDist);
-
                 		cout << "Centroid Distance [" << a << "][" << b << "]: " << CentDist << endl;
             //		   	cout << "Centroid Angle [" << a << "][" << b << "]: " <<  CentAng << endl;
                 		cout << endl;
+                		TempCent[b] = CentDist;
+                   	   }
 
+                	MinCent = TempCent[0];
+                	TempIndex = 1;
+                	index = 1;
 
+                	for(unsigned int c = 1;c < contours2.size(); c++)
+                	{
+                   		TempIndex++;
+                		if(MinCent > TempCent[c])
+                		{
+                			MinCent = TempCent[c];
+                			index = TempIndex;
+                		}
+                   	}
 
-                	   }
+                	MinimumCentroid[a] = MinCent;
+                	Map1to2[a] = index;
+               }
 
+                for(unsigned int k = 0; k < contours1.size(); k++)
+                	cout <<"Map1to2: " << Map1to2[k] <<". " << MinimumCentroid[k] << endl;
 }
-
-
-
 
 
 int Image :: Display()
@@ -198,7 +212,7 @@ int Image :: Display()
 	    imshow( "Display window1", methods );  // Show our image inside it.
 	    namedWindow( "Display window2", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	    imshow( "Display window2", grndtrth );  //
-	    waitKey(0);                                          // Wait for a keystroke in the window
+	    waitKey(0);      // Wait for a keystroke in the window
 
 	    return 0;
 }
