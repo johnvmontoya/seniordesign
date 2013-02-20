@@ -16,7 +16,6 @@ int main( int argc, char** argv )
 {
 	Mat Grndtrth;
 	Mat Methods;
-	vector <vector <Point2i> > blobs1;
 	Image imgObj (Methods, Grndtrth);
 	imgObj.ImageManip();
 	imgObj.Normalize();
@@ -24,7 +23,6 @@ int main( int argc, char** argv )
 	imgObj.ImageStats();
 	imgObj.CentroidConstraint();
 	imgObj.Display();
-
 }
 
 
