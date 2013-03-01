@@ -15,7 +15,7 @@ using namespace cv;
 using namespace std;
 
 
-Mat SingleImageComps(const Mat &binary, vector <vector<Point2i> > &blobs);
+void SingleImageComps(const Mat &binary, vector <vector<Point2i> > &blobs);
 
 
 
