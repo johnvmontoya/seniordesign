@@ -21,6 +21,10 @@ using namespace std;
 class Image {
 	Mat methods;
 	Mat grndtrth;
+	Mat NormGrndtrth;
+	Mat NormMethods;
+	Mat NGrndtrth;
+	Mat NMethods;
 	vector<vector<Point> > contours1;
 	vector<Vec4i> hierarchy1;
 	vector<vector<Point> > contours2;
@@ -36,6 +40,7 @@ public:
     void Labeling();
     void ImageStats();
     void CentroidConstraint();
+//    void SetDistanceConstraint();
 	int Display();
 
 };
@@ -81,29 +86,77 @@ void Image :: Normalize()
 	Mat mask;
 	mask = grndtrth;
 	multiply(mask,methods,methods,1);
-	threshold(methods,methods,0.5,1.0,THRESH_BINARY);
-	threshold(grndtrth,grndtrth,0.5,1.0,THRESH_BINARY);
+
+//	threshold(methods,methods,0.0,1.0,THRESH_BINARY);
+//	threshold(grndtrth,grndtrth,0.5,1.0,THRESH_BINARY);
 //	threshold(methods,methods,127,255,THRESH_BINARY);
 //	threshold(grndtrth,grndtrth,127,255,THRESH_BINARY);
+
+	methods.convertTo(methods,CV_8U);
+	grndtrth.convertTo(grndtrth,CV_8U);
 }
+
+
 
 void Image :: Labeling()
 {
     vector <vector <Point2i> > blobs1;
     vector <vector <Point2i> > blobs2;
-    Mat NormMethods, NormGrndtrth;
-    NormMethods = SingleImageComps(methods,blobs2);
-    NormGrndtrth = SingleImageComps(grndtrth,blobs1);
+    NormGrndtrth = cv::Mat::zeros(grndtrth.size(), CV_8UC3);
+    NormMethods = cv::Mat::zeros(methods.size(), CV_8UC3);
+    threshold(methods,NMethods,0.0,1.0,THRESH_BINARY);
+    threshold(grndtrth,NGrndtrth,0.0,1.0,THRESH_BINARY);
+    SingleImageComps(NMethods,blobs2);
+    SingleImageComps(NGrndtrth,blobs1);
+    unsigned char n,m;
+    m = 1;
+    n = 1;
 
-    methods = NormMethods;
-    grndtrth = NormGrndtrth;
+    for(size_t i=0; i < blobs1.size(); i++)
+      {
+         unsigned char r = m;
+         unsigned char g = m;
+         unsigned char b = m;
+
+         for(size_t j=0; j < blobs1[i].size(); j++)
+           {
+                int x = blobs1[i][j].x;
+                int y = blobs1[i][j].y;
+
+                NormGrndtrth.at<Vec3b>(y,x)[0] = b;
+                NormGrndtrth.at<Vec3b>(y,x)[1] = g;
+                NormGrndtrth.at<Vec3b>(y,x)[2] = r;
+            }
+         m++;
+        }
+
+
+
+    for(size_t i=0; i < blobs2.size(); i++)
+      {
+          unsigned char r = n;
+          unsigned char g = n;
+          unsigned char b = n;
+
+          for(size_t j=0; j < blobs2[i].size(); j++)
+            {
+                int x = blobs2[i][j].x;
+                int y = blobs2[i][j].y;
+
+                NormMethods.at<Vec3b>(y,x)[0] = b;
+                NormMethods.at<Vec3b>(y,x)[1] = g;
+                NormMethods.at<Vec3b>(y,x)[2] = r;
+            }
+          n++;
+        }
 }
+
+
 
 void Image :: ImageStats()
 {
 	findContours(grndtrth,contours1,hierarchy1,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
 	findContours(methods,contours2,hierarchy2,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
-
 
 	  int idx1 = 0;
 	        for( ; idx1 >= 0; idx1 = hierarchy1[idx1][0] )
@@ -204,14 +257,38 @@ void Image :: CentroidConstraint()
                 for(unsigned int k = 0; k < contours1.size(); k++)
                 	cout <<"Map1to2: " << Map1to2[k] <<". " << MinimumCentroid[k] << endl;
 }
+/*
+void Image :: SetDistanceConstraint()
+{
+
+	Mat grndtrth_labeled = NormGrndtrth;
+	Mat methods_labeled = NormMethods;
+
+
+//	for(unsigned int a = 0;a < contours1.size(); a++)
+//		for(unsigned int b = 0;b < contours2.size(); b++)
+//		{
+
+//		}
+}
+*/
+
+
+
+
 
 
 int Image :: Display()
 {
-	    namedWindow( "Display window1", CV_WINDOW_AUTOSIZE );// Create a window for display.
+
+
+		namedWindow( "Display window1", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	    imshow( "Display window1", methods );  // Show our image inside it.
 	    namedWindow( "Display window2", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	    imshow( "Display window2", grndtrth );  //
+
+
+//	    cout << endl << methods << endl;
 	    waitKey(0);      // Wait for a keystroke in the window
 
 	    return 0;

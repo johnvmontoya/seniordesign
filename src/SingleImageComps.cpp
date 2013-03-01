@@ -23,7 +23,7 @@
 using namespace cv;
 using namespace std;
 
-Mat SingleImageComps(const Mat &binary, vector <vector<Point2i> > &blobs)
+void SingleImageComps(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs)
 {
     blobs.clear();
 
@@ -32,46 +32,35 @@ Mat SingleImageComps(const Mat &binary, vector <vector<Point2i> > &blobs)
     // 1  - unlabelled foreground
     // 2+ - labelled foreground
 
-    Mat label_image;
-    binary.convertTo(label_image, CV_8UC1); // weird it doesn't support CV_32S!
+    cv::Mat label_image;
+    binary.convertTo(label_image, CV_32FC1); // weird it doesn't support CV_32S!
 
     int label_count = 2; // starts at 2 because 0,1 are used already
 
-    for(int y=0; y < binary.rows; y++)
-       {
-        for(int x=0; x < binary.cols; x++)
-          {
-            if((int)label_image.at<float>(y,x) != 1)
-            {
+    for(int y=0; y < binary.rows; y++) {
+        for(int x=0; x < binary.cols; x++) {
+            if((int)label_image.at<float>(y,x) != 1) {
                 continue;
             }
 
-            Rect rect;
-            floodFill(label_image, Point(x,y), Scalar(label_count), &rect, Scalar(0), Scalar(0), 8);
+            cv::Rect rect;
+            cv::floodFill(label_image, cv::Point(x,y), cv::Scalar(label_count), &rect, cv::Scalar(0), cv::Scalar(0), 4);
 
-            vector <Point2i> blob;
+            std::vector <cv::Point2i> blob;
 
-            for(int i=rect.y; i < (rect.y+rect.height); i++)
-              {
-                for(int j=rect.x; j < (rect.x+rect.width); j++)
-                  {
-                    if((int)label_image.at<float>(i,j) != label_count)
-                     {
+            for(int i=rect.y; i < (rect.y+rect.height); i++) {
+                for(int j=rect.x; j < (rect.x+rect.width); j++) {
+                    if((int)label_image.at<float>(i,j) != label_count) {
                         continue;
-                     }
+                    }
 
-                    blob.push_back(Point2i(j,i));
-                  }
-               }
+                    blob.push_back(cv::Point2i(j,i));
+                }
+            }
 
             blobs.push_back(blob);
 
             label_count++;
         }
     }
-
-return label_image;
-
 }
-
-
