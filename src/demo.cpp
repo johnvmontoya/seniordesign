@@ -26,6 +26,7 @@ int main( int argc, char** argv )
 	imgObj.CentroidConstraint();
 //	imgObj.SetDistanceConstraint();
 	imgObj.Display();
+	imgObj.TestCoordinates();
 
 
 

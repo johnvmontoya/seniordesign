@@ -40,6 +40,7 @@ public:
     void Labeling();
     void ImageStats();
     void CentroidConstraint();
+    void TestCoordinates();
 //    void SetDistanceConstraint();
 	int Display();
 
@@ -257,12 +258,29 @@ void Image :: CentroidConstraint()
                 for(unsigned int k = 0; k < contours1.size(); k++)
                 	cout <<"Map1to2: " << Map1to2[k] <<". " << MinimumCentroid[k] << endl;
 }
+void Image :: TestCoordinates()
+{
+
+	vector<vector<Point> >::const_iterator contour = contours1.begin();
+	for(; contour != contours1.end(); ++contour) {
+		cout << "Contour: " << *contour << endl;
+		//This gives each contour as an array of points
+		vector<Point>::const_iterator point = contour->begin();
+		for(; point != contour->end(); ++point){
+			cout << "Point: " << *point << endl;
+			//This iterates through each point in the current contour
+		}
+	}
+
+}
 /*
 void Image :: SetDistanceConstraint()
 {
 
 	Mat grndtrth_labeled = NormGrndtrth;
 	Mat methods_labeled = NormMethods;
+
+
 
 
 //	for(unsigned int a = 0;a < contours1.size(); a++)
