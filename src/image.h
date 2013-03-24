@@ -31,6 +31,7 @@ class Image {
 	vector<Vec4i> hierarchy2;
 	double CenX1, CenY1, CenX2, CenY2;
 	int Map1to2[];
+	int HausdorffMap1to2[];
 
 public:
     Image(Mat, Mat);
@@ -40,7 +41,8 @@ public:
     void Labeling();
     void ImageStats();
     void CentroidConstraint();
-    void TestCoordinates();
+    vector<pair<size_t,double> > HausdorffConstraint(int MinimizeFlag, double MaxDistance);
+    double MaxDist(const vector<Point>&,const vector<Point>&);
 //    void SetDistanceConstraint();
 	int Display();
 
@@ -258,21 +260,105 @@ void Image :: CentroidConstraint()
                 for(unsigned int k = 0; k < contours1.size(); k++)
                 	cout <<"Map1to2: " << Map1to2[k] <<". " << MinimumCentroid[k] << endl;
 }
-void Image :: TestCoordinates()
+double Image :: MaxDist(const vector<Point>& c1,const vector<Point>& c2)
 {
+	double result = -1;
 
-	vector<vector<Point> >::const_iterator contour = contours1.begin();
-	for(; contour != contours1.end(); ++contour) {
-		cout << "Contour: " << *contour << endl;
-		//This gives each contour as an array of points
-		vector<Point>::const_iterator point = contour->begin();
-		for(; point != contour->end(); ++point){
-			cout << "Point: " << *point << endl;
-			//This iterates through each point in the current contour
+	vector<Point>::const_iterator point1;
+	vector<Point>::const_iterator point2;
+	for(point1 = c1.begin(); point1 != c1.end(); ++point1)
+	{
+		for(point2 = c2.begin(); point2 != c2.end(); ++point2)
+		{
+			double val = sqrt(((point2->x - point1->x)*(point2->x - point1->x))+((point2->y - point1->y)*(point2->y - point1->y)));
+			if(val > result)
+			{
+				result = val;
+			}
 		}
 	}
+	return result;
+}
+vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
+{
+	vector<pair<size_t,double> > distances;
+	vector<pair<size_t,double> > minDists1to2;
+	int HausdorffMap1to2[contours1.size()];
+
+	for(size_t contour1Index = 0; contour1Index < contours1.size() ; ++contour1Index)
+	{
+
+		//cout << "Contour size: " << contour1->size() << endl;
+		//cout << "Contour: " << *contour << endl;
+		//This gives each contour as an array of points
+		vector<Point> currContour1 = contours1[contour1Index];
+		size_t maxDistanceIndex = 0;
+		size_t minDistanceIndex = 0;
+		double maxDistanceSoFar = 0; //DBL_MAX;
+		double minimumDistance = DBL_MAX;
+
+		//cout << "Contour: " << contour1Index <<endl;
+		//Iterate through each component and find the max distance to each other component
+
+		for(size_t contour2Index = 0; contour2Index != contours2.size(); ++contour2Index)
+		{
+			vector<Point> currContour2 = contours2[contour2Index];
+
+
+			double currMaxDist = MaxDist(currContour1,currContour2);
+			//if(currMaxDist > maxDistanceSoFar)
+			//{
+				maxDistanceIndex = contour2Index;
+				maxDistanceSoFar = currMaxDist;
+
+				//cout << "Index: " << maxDistanceIndex << " Distance: " << maxDistanceSoFar << endl;
+				if (maxDistanceSoFar<minimumDistance)
+				{
+					minimumDistance = maxDistanceSoFar;
+					minDistanceIndex = contour2Index;
+				}
+				if (contour2Index == contours2.size() - 1)
+				{
+					//cout << "Minimum Distance: " << minimumDistance << " @ Index: " << minDistanceIndex << endl;
+					minDists1to2.push_back(pair<size_t,double>(minDistanceIndex,minimumDistance));
+				}
+			//}
+
+			//distances.push_back(pair<size_t,double>(maxDistanceIndex,maxDistanceSoFar));
+		}
+		//distances.push_back(pair<size_t,double>(maxDistanceIndex,minimumDistance));
+		//iterate over vector to find the minimum distance and the associated component
+
+	}
+	//Apply minimizing (if flagged) and return Maps1to2
+	for(vector<pair<size_t,double> >::iterator it = minDists1to2.begin(); it != minDists1to2.end(); ++it)
+	{
+
+
+		if (MinimizeFlag == 1)
+				{
+					if (it->second < MaxDistance)
+					{
+						HausdorffMap1to2[(it - minDists1to2.begin())]=it->first;
+					}
+					else
+					{
+						HausdorffMap1to2[(it - minDists1to2.begin())]=0;
+					}
+				}
+		else
+				{
+					HausdorffMap1to2[(it - minDists1to2.begin())]=it->first;
+				}
+
+	}
+    for(unsigned int k = 0; k < contours1.size(); k++)
+    	cout <<"HausdorffMap1to2: " << HausdorffMap1to2[k] << endl;
+
+	return distances; //Probably don't want to return distances. Return final array of matched components?
 
 }
+
 /*
 void Image :: SetDistanceConstraint()
 {

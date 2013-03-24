@@ -25,8 +25,8 @@ int main( int argc, char** argv )
 	imgObj.ImageStats();
 	imgObj.CentroidConstraint();
 //	imgObj.SetDistanceConstraint();
-	imgObj.Display();
-	imgObj.TestCoordinates();
+//	imgObj.Display();
+	imgObj.HausdorffConstraint(1,200.00);
 
 
 
