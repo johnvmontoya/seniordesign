@@ -25,6 +25,8 @@ class Image {
 	Mat NormMethods;
 	Mat NGrndtrth;
 	Mat NMethods;
+	vector <vector <Point2i> > blobs1;
+	vector <vector <Point2i> > blobs2;
 	vector<vector<Point> > contours1;
 	vector<Vec4i> hierarchy1;
 	vector<vector<Point> > contours2;
@@ -39,8 +41,9 @@ public:
     void Normalize();
     void Labeling();
     void ImageStats();
-    void CentroidConstraint();
-//    void SetDistanceConstraint();
+    void CentroidConstraint(int *);
+    void SetDistanceConstraint();
+    void ColorMap();
 	int Display();
 
 };
@@ -86,11 +89,6 @@ void Image :: Normalize()
 	Mat mask;
 	mask = grndtrth;
 	multiply(mask,methods,methods,1);
-
-//	threshold(methods,methods,0.0,1.0,THRESH_BINARY);
-//	threshold(grndtrth,grndtrth,0.5,1.0,THRESH_BINARY);
-//	threshold(methods,methods,127,255,THRESH_BINARY);
-//	threshold(grndtrth,grndtrth,127,255,THRESH_BINARY);
 
 	methods.convertTo(methods,CV_8U);
 	grndtrth.convertTo(grndtrth,CV_8U);
@@ -174,7 +172,7 @@ void Image :: ImageStats()
 	         }
 }
 
-void Image :: CentroidConstraint()
+void Image :: CentroidConstraint(int *Map1to2)
 {
 
     /// Get the moments
@@ -218,7 +216,6 @@ void Image :: CentroidConstraint()
                 double TempCent[contours2.size()];
                 int TempIndex;
                 int index;
-                int Map1to2[contours1.size()];
 
                 for(unsigned int a = 0; a < contours1.size(); a++)
                 {
@@ -255,40 +252,276 @@ void Image :: CentroidConstraint()
                }
 
                 for(unsigned int k = 0; k < contours1.size(); k++)
-                	cout <<"Map1to2: " << Map1to2[k] <<". " << MinimumCentroid[k] << endl;
+                	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;
 }
-/*
+
+
+
 void Image :: SetDistanceConstraint()
 {
 
 	Mat grndtrth_labeled = NormGrndtrth;
 	Mat methods_labeled = NormMethods;
+	Mat Overlap;
+	Mat Set1(grndtrth.rows,grndtrth.cols,CV_8UC1);
+	Mat Set2(methods.rows,methods.cols,CV_8UC1);
+	vector <double> Set1V;
+	vector <double> BinDists;
+	int sum;
+	float D[contours1.size()][contours2.size()];
+//	int index[grndtrth.rows * grndtrth.cols];
+//	int ind[grndtrth.rows * grndtrth.cols];
+	vector <int> index;
+//	vector <int> D;
+	Mat D1;
+//    Mat Set1, Set2;
+//    grndtrth_labeled.convertTo(Set1,CV_8UC3);
+//    methods_labeled.convertTo(methods_labeled,CV_8UC1);
+//    Set1 = grndtrth_labeled;
 
-
-//	for(unsigned int a = 0;a < contours1.size(); a++)
+//    for(unsigned int a = 0;a < contours1.size(); a++)
 //		for(unsigned int b = 0;b < contours2.size(); b++)
 //		{
+			for(int i = 0;i < grndtrth_labeled.rows;++i)
+				for(int j = 0;j < grndtrth_labeled.cols;++j)
+				{
+
+					Set1.at<uchar>(i,j) = (int)grndtrth_labeled.at<uchar>(i,j) == 2;
+					Set2.at<uchar>(i,j) = (int)methods_labeled.at<uchar>(i,j) == 1;
+				}
+
+			cout << Set1;
+			multiply(Set1,Set2,Overlap,1);
+			sum = 0;
+
+			for(int m = 0;m < grndtrth_labeled.rows;m++)
+				for(int n = 0;n < grndtrth_labeled.cols;n++)
+				{
+					if ((int)Overlap.at<uchar>(m,n) != 0)
+					 sum++;
+				}
+
+
+				cout << sum;
+				if(sum == 0)
+				 D[0][0] = 0.0;
+
+				else
+				{
+					distanceTransform(Set1,D1,CV_DIST_L2,CV_DIST_MASK_PRECISE);
+
+					for(int x = 0;x < grndtrth_labeled.rows;x++)
+					  for(int y = 0; y < grndtrth_labeled.cols;y++)
+					  {
+						  Set1V.push_back((double)D1.at<double>(x,y));
+					  }
+
+//				    for(int p = 0;p < Set1V.size();p++)
+//				    	cout << Set1V.at(p) << endl;
+
+					int indices = 0;
+
+					for(int s = 0;s < grndtrth_labeled.rows;s++)
+					  for(int t = 0;t < grndtrth_labeled.cols;t++)
+					   {
+					      if((int)Set2.at<uchar>(s,t) != 0)
+						    index.push_back(indices);
+
+					      indices++;
+					   }
+
+
+					for(int p = 0;p < index.size();p++)
+					{
+						BinDists.push_back(Set1V.at(index.at(p)));
+					}
+
+//					for(int z = 0; z < index.size();z++)
+//					cout << index.at(z) << endl;
+
+				}
+
+
 
 //		}
+
 }
-*/
 
 
+void Image :: ColorMap()
+{
+
+	int CentroidMatch[contours1.size()];
+	CentroidConstraint(CentroidMatch);
+    SingleImageComps(NMethods,blobs2);
+    SingleImageComps(NGrndtrth,blobs1);
+    unsigned char r, g, b;
+    int x;
+    int y = 0;
+
+	for(int i=blobs1.size()-1; i >= 0; i--)
+	      {
+		     x = CentroidMatch[blobs1.size() - 1 - i];
+		     switch(x)
+		        {
+		        case 1:
+		    	    r = 255;	//red
+		            g = 0;
+		            b = 0;
+		            break;
+		        case 2:
+		    	    r = 0;
+		            g = 255;	// green
+		            b = 0;
+		            break;
+		        case 3:
+		    	    r = 0;
+		            g = 0;
+		            b = 255;	// blue
+		            break;
+		        case 4:
+		    	     r = 255;	// yellow
+		             g = 255;
+		             b = 0;
+		             break;
+		        case 5:
+		    	     r = 0;   // purple
+		             g = 255;
+		             b = 255;
+		             break;
+		        case 6:
+		    	     r = 255;		// turqoise
+		             g = 0;
+		             b = 255;
+		             break;
+		        case 7:
+		    	     r = 255;	//  white
+		             g = 255;
+		             b = 255;
+		             break;
+		        case 8:
+		    	     r = 255;			// Orange
+		             g = 153;
+		             b = 0;
+		             break;
+		        case 9:
+		    	     r = 255;		// Pink
+		             g = 102;
+		             b = 153;
+		             break;
+		        case 0:
+		    	     r = 0;			// Black
+		             g = 0;
+		             b = 0;
+		             break;
+		        default:
+		        	r = 255 * (rand()/(1.0 + RAND_MAX));
+		        	g = 255 * (rand()/(1.0 + RAND_MAX));
+		        	b = 255 * (rand()/(1.0 + RAND_MAX));
+		        	break;
+		        }
+
+	         for(size_t j=0; j < blobs1[i].size(); j++)
+	           {
+	                int x = blobs1[i][j].x;
+	                int y = blobs1[i][j].y;
+
+	                NormGrndtrth.at<Vec3b>(y,x)[0] = b;
+	                NormGrndtrth.at<Vec3b>(y,x)[1] = g;
+	                NormGrndtrth.at<Vec3b>(y,x)[2] = r;
+	            }
+
+	        }
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+	    for(int i=blobs2.size()-1; i >= 0; i--)
+	      {
+	    	y++;
+	    	switch(y)
+		        {
+		        case 1:
+		    	    r = 255;	//red
+		            g = 0;
+		            b = 0;
+		            break;
+		        case 2:
+		    	    r = 0;
+		            g = 255;	// green
+		            b = 0;
+		            break;
+		        case 3:
+		    	    r = 0;
+		            g = 0;
+		            b = 255;	// blue
+		            break;
+		        case 4:
+		    	     r = 255;	// yellow
+		             g = 255;
+		             b = 0;
+		             break;
+		        case 5:
+		    	     r = 255;   // purple
+		             g = 0;
+		             b = 255;
+		             break;
+		        case 6:
+		    	     r = 0;		// turqoise
+		             g = 255;
+		             b = 255;
+		             break;
+		        case 7:
+		    	     r = 255;	//  white
+		             g = 255;
+		             b = 255;
+		             break;
+		        case 8:
+		    	     r = 255;			// Orange
+		             g = 153;
+		             b = 0;
+		             break;
+		        case 9:
+		    	     r = 255;		// Pink
+		             g = 102;
+		             b = 153;
+		             break;
+		        case 0:
+		    	     r = 0;			// Black
+		             g = 0;
+		             b = 0;
+		             break;
+		        default:
+		        	r = 255 * (rand()/(1.0 + RAND_MAX));
+		        	g = 255 * (rand()/(1.0 + RAND_MAX));
+		        	b = 255 * (rand()/(1.0 + RAND_MAX));
+		        	break;
+		        }
 
 
+	          for(size_t j=0; j < blobs2[i].size(); j++)
+	            {
+	                int x = blobs2[i][j].x;
+	                int y = blobs2[i][j].y;
 
+	                NormMethods.at<Vec3b>(y,x)[0] = b;
+	                NormMethods.at<Vec3b>(y,x)[1] = g;
+	                NormMethods.at<Vec3b>(y,x)[2] = r;
+	            }
+	        }
+
+//	for(unsigned int k = 0; k < contours1.size(); k++)
+//	cout << CentroidMaps[k] << endl;
+
+}
 
 int Image :: Display()
 {
 
 
-		namedWindow( "Display window1", CV_WINDOW_AUTOSIZE );// Create a window for display.
-	    imshow( "Display window1", methods );  // Show our image inside it.
-	    namedWindow( "Display window2", CV_WINDOW_AUTOSIZE );// Create a window for display.
-	    imshow( "Display window2", grndtrth );  //
+		namedWindow( "Methods Image", CV_WINDOW_AUTOSIZE );// Create a window for display.
+	    imshow( "Methods Image", NormMethods );  // Show our image inside it.
+	    namedWindow( "Centroids Matching", CV_WINDOW_AUTOSIZE );// Create a window for display.
+	    imshow( "Centroids Matching", NormGrndtrth );  //
 
-
-//	    cout << endl << methods << endl;
 	    waitKey(0);      // Wait for a keystroke in the window
 
 	    return 0;
