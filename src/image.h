@@ -284,7 +284,7 @@ double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 
 	}
 
-	cout << " Haus Dist: " << hausDist << endl;
+	//cout << " Haus Dist: " << hausDist << endl;
 	return hausDist;
 }
 vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
