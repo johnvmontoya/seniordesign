@@ -42,7 +42,7 @@ public:
     void ImageStats();
     void CentroidConstraint();
     vector<pair<size_t,double> > HausdorffConstraint(int MinimizeFlag, double MaxDistance);
-    double MaxDist(const vector<Point>&,const vector<Point>&);
+    double MinDist(const vector<Point>&,const vector<Point>&);
 //    void SetDistanceConstraint();
 	int Display();
 
@@ -260,29 +260,38 @@ void Image :: CentroidConstraint()
                 for(unsigned int k = 0; k < contours1.size(); k++)
                 	cout <<"Map1to2: " << Map1to2[k] <<". " << MinimumCentroid[k] << endl;
 }
-double Image :: MaxDist(const vector<Point>& c1,const vector<Point>& c2)
+double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 {
-	double result = -1;
-
+	double shortest;
+	double hausDist = -1;
 	vector<Point>::const_iterator point1;
 	vector<Point>::const_iterator point2;
 	for(point1 = c1.begin(); point1 != c1.end(); ++point1)
 	{
+		shortest = DBL_MAX;
 		for(point2 = c2.begin(); point2 != c2.end(); ++point2)
 		{
-			double val = sqrt(((point2->x - point1->x)*(point2->x - point1->x))+((point2->y - point1->y)*(point2->y - point1->y)));
-			if(val > result)
+			double distIJ = sqrt(((point2->x - point1->x)*(point2->x - point1->x))+((point2->y - point1->y)*(point2->y - point1->y)));
+			if(distIJ < shortest)
 			{
-				result = val;
+				shortest = distIJ;
 			}
 		}
+		if (shortest>hausDist)
+		{
+			hausDist = shortest;
+		}
+
 	}
-	return result;
+
+	cout << " Haus Dist: " << hausDist << endl;
+	return hausDist;
 }
 vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
 {
 	vector<pair<size_t,double> > distances;
-	vector<pair<size_t,double> > minDists1to2;
+	vector<pair<size_t,double> > maxDists1to2;
+	vector<pair<size_t,double> > maxDists2to1;
 	int HausdorffMap1to2[contours1.size()];
 
 	for(size_t contour1Index = 0; contour1Index < contours1.size() ; ++contour1Index)
@@ -291,10 +300,11 @@ vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,doubl
 		//cout << "Contour size: " << contour1->size() << endl;
 		//cout << "Contour: " << *contour << endl;
 		//This gives each contour as an array of points
+
 		vector<Point> currContour1 = contours1[contour1Index];
-		size_t maxDistanceIndex = 0;
+
 		size_t minDistanceIndex = 0;
-		double maxDistanceSoFar = 0; //DBL_MAX;
+
 		double minimumDistance = DBL_MAX;
 
 		//cout << "Contour: " << contour1Index <<endl;
@@ -304,25 +314,26 @@ vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,doubl
 		{
 			vector<Point> currContour2 = contours2[contour2Index];
 
+			//cout << contour1Index << " to " << contour2Index;
+			double currMinDist = MinDist(currContour1,currContour2);
+			//cout << contour2Index << " to " << contour1Index;
+			double currMinDist2 = MinDist(currContour2,currContour1);
 
-			double currMaxDist = MaxDist(currContour1,currContour2);
-			//if(currMaxDist > maxDistanceSoFar)
-			//{
-				maxDistanceIndex = contour2Index;
-				maxDistanceSoFar = currMaxDist;
+			double hausDist = max(currMinDist,currMinDist2);
+			//cout << "Hausdorff Distance: " << hausDist << endl;;
 
-				//cout << "Index: " << maxDistanceIndex << " Distance: " << maxDistanceSoFar << endl;
-				if (maxDistanceSoFar<minimumDistance)
-				{
-					minimumDistance = maxDistanceSoFar;
-					minDistanceIndex = contour2Index;
-				}
-				if (contour2Index == contours2.size() - 1)
-				{
-					//cout << "Minimum Distance: " << minimumDistance << " @ Index: " << minDistanceIndex << endl;
-					minDists1to2.push_back(pair<size_t,double>(minDistanceIndex,minimumDistance));
-				}
-			//}
+			if(hausDist < minimumDistance)
+			{
+				minimumDistance = hausDist;
+				minDistanceIndex = contour2Index;
+			}
+
+			if (contour2Index == contours2.size() - 1)
+			{
+				//cout << "Match Distance: " << minimumDistance << " @ Index: " << minDistanceIndex+1 << endl;
+				maxDists1to2.push_back(pair<size_t,double>(minDistanceIndex+1,minimumDistance));
+			}
+
 
 			//distances.push_back(pair<size_t,double>(maxDistanceIndex,maxDistanceSoFar));
 		}
@@ -331,7 +342,7 @@ vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,doubl
 
 	}
 	//Apply minimizing (if flagged) and return Maps1to2
-	for(vector<pair<size_t,double> >::iterator it = minDists1to2.begin(); it != minDists1to2.end(); ++it)
+	for(vector<pair<size_t,double> >::iterator it = maxDists1to2.begin(); it != maxDists1to2.end(); ++it)
 	{
 
 
@@ -339,16 +350,16 @@ vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,doubl
 				{
 					if (it->second < MaxDistance)
 					{
-						HausdorffMap1to2[(it - minDists1to2.begin())]=it->first;
+						HausdorffMap1to2[(it - maxDists1to2.begin())]=it->first;
 					}
 					else
 					{
-						HausdorffMap1to2[(it - minDists1to2.begin())]=0;
+						HausdorffMap1to2[(it - maxDists1to2.begin())]=0;
 					}
 				}
 		else
 				{
-					HausdorffMap1to2[(it - minDists1to2.begin())]=it->first;
+					HausdorffMap1to2[(it - maxDists1to2.begin())]=it->first;
 				}
 
 	}
@@ -387,7 +398,8 @@ int Image :: Display()
 
 
 		namedWindow( "Display window1", CV_WINDOW_AUTOSIZE );// Create a window for display.
-	    imshow( "Display window1", methods );  // Show our image inside it.
+		imshow( "Display window1", methods );// Show our image inside it.
+
 	    namedWindow( "Display window2", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	    imshow( "Display window2", grndtrth );  //
 
