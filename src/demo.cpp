@@ -24,7 +24,7 @@ int main( int argc, char** argv )
 	imgObj.Labeling();
 	imgObj.ImageStats();
 	//imgObj.CentroidConstraint();
-	imgObj.HausdorffConstraint(1,200.00);
+	//imgObj.HausdorffConstraint(1,200.00);
 //	imgObj.SetDistanceConstraint();
 	imgObj.ColorMap();
 	imgObj.Display();

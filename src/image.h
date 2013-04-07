@@ -44,7 +44,7 @@ public:
     void ImageStats();
     void CentroidConstraint(int *);
     void ColorMap();
-    vector<pair<size_t,double> > HausdorffConstraint(int MinimizeFlag, double MaxDistance);
+    void HausdorffConstraint(int *, int MinimizeFlag, double MaxDistance);
     double MinDist(const vector<Point>&,const vector<Point>&);
 //    void SetDistanceConstraint();
 	int Display();
@@ -260,8 +260,8 @@ void Image :: CentroidConstraint(int *Map1to2)
                 	Map1to2[a] = index;
                }
 
-                for(unsigned int k = 0; k < contours1.size(); k++)
-                	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;
+                /*for(unsigned int k = 0; k < contours1.size(); k++)
+                	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;*/
 }
 double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 {
@@ -290,12 +290,12 @@ double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 	//cout << " Haus Dist: " << hausDist << endl;
 	return hausDist;
 }
-vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
+void Image :: HausdorffConstraint(int *HausdorffMap1to2,int MinimizeFlag,double MaxDistance)
 {
 	vector<pair<size_t,double> > distances;
 	vector<pair<size_t,double> > maxDists1to2;
 	vector<pair<size_t,double> > maxDists2to1;
-	int HausdorffMap1to2[contours1.size()];
+	//int HausdorffMap1to2[contours1.size()];
 
 	for(size_t contour1Index = 0; contour1Index < contours1.size() ; ++contour1Index)
 	{
@@ -366,10 +366,10 @@ vector<pair<size_t,double> > Image :: HausdorffConstraint(int MinimizeFlag,doubl
 				}
 
 	}
-    for(unsigned int k = 0; k < contours1.size(); k++)
-    	cout <<"HausdorffMap1to2: " << HausdorffMap1to2[k] << endl;
+/*    for(unsigned int k = 0; k < contours1.size(); k++)
+    	cout <<"HausdorffMap1to2: " << HausdorffMap1to2[k] << endl;*/
 
-	return distances; //Probably don't want to return distances. Return final array of matched components?
+	//return *HausdorffMap1to2;
 
 }
 
@@ -394,7 +394,9 @@ void Image :: ColorMap()
 {
 
 	int CentroidMatch[contours1.size()];
+	int HausdorffMatch[contours1.size()];
 	CentroidConstraint(CentroidMatch);
+	HausdorffConstraint(HausdorffMatch,1,200.00);
     SingleImageComps(NMethods,blobs2);
     SingleImageComps(NGrndtrth,blobs1);
     unsigned char r, g, b;
@@ -550,20 +552,24 @@ void Image :: ColorMap()
 	            }
 	        }
 
-//	for(unsigned int k = 0; k < contours1.size(); k++)
-//	cout << CentroidMaps[k] << endl;
-
+		for(unsigned int k = 0; k < contours1.size(); k++)
+		{
+			cout << "Component " << (k+1) << ":" << endl;
+			cout << "	Centroid Match: " << CentroidMatch[k] << endl;
+	       	cout <<"	HausdorffMatch: " << HausdorffMatch[k] << endl;
+		}
 }
+
 
 
 int Image :: Display()
 {
 
 
-		namedWindow( "Display window1", CV_WINDOW_AUTOSIZE );// Create a window for display.
-	    imshow( "Display window1", NormMethods );  // Show our image inside it.
-	    namedWindow( "Display window2", CV_WINDOW_AUTOSIZE );// Create a window for display.
-	    imshow( "Display window2", NormGrndtrth );  //
+		namedWindow( "Centroid Match2", CV_WINDOW_AUTOSIZE );// Create a window for display.
+	    imshow( "Centroid Match2", NormMethods );  // Show our image inside it.
+	    namedWindow( "Centroid Match1", CV_WINDOW_AUTOSIZE );// Create a window for display.
+	    imshow( "Centroid Match1", NormGrndtrth );  //
 
 
 //	    cout << endl << methods << endl;
