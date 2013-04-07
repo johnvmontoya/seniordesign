@@ -23,11 +23,11 @@ int main( int argc, char** argv )
 	imgObj.Normalize();
 	imgObj.Labeling();
 	imgObj.ImageStats();
-	imgObj.CentroidConstraint();
+	//imgObj.CentroidConstraint();
 	imgObj.HausdorffConstraint(1,200.00);
 //	imgObj.SetDistanceConstraint();
+	imgObj.ColorMap();
 	imgObj.Display();
-
 
 
 
