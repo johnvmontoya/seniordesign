@@ -44,7 +44,7 @@ public:
     void Normalize();
     void Labeling();
     void ImageStats();
-    void CentroidConstraint();
+    void CentroidConstraint(int ApplyAreaLimiting, double AreaLimit);
     void ColorMap();
     void ColorMapTest(int *Matches,string NameofConstraint);
 
@@ -184,9 +184,10 @@ void Image :: ImageStats()
 	         }
 }
 
-void Image :: CentroidConstraint()
+void Image :: CentroidConstraint(int ApplyAreaLimiting,double AreaLimit)
 {
 	int Map1to2[contours1.size()];
+	double area1,area2,percentDiff;
     /// Get the moments
       vector<Moments> mu1(contours1.size() );
       for( unsigned int i = 0; i < contours1.size(); i++ )
@@ -263,6 +264,30 @@ void Image :: CentroidConstraint()
                 	MinimumCentroid[a] = MinCent;
                 	Map1to2[a] = index;
                }
+
+                //Apply Area limit to centroid constraint.
+                if (ApplyAreaLimiting == 1)
+                {
+                	for(unsigned int k = 0; k < contours1.size() ; k++)
+                	{
+                		 area1=contourArea(contours1[k]);
+                		 area2=contourArea(contours2[Map1to2[k]-1]);
+                		 percentDiff=(abs((area2 - area1) / ((area1 + area2)/2))*100);
+                		 cout << "Area " << area1 <<" vs. " << area2 << endl;
+                		 cout << percentDiff <<"% difference" << endl;
+                		 if (percentDiff > AreaLimit)
+                		 {
+                			 Map1to2[k] = 0;
+                			 cout << "Discarding Match" << endl;
+                		 }
+                	}
+
+                }
+
+
+
+
+
                 ColorMapTest(Map1to2,"Centroid");
                 /*for(unsigned int k = 0; k < contours1.size(); k++)
                 	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;*/
@@ -371,7 +396,7 @@ void Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
 
 	}
     //for(unsigned int k = 0; k < contours1.size(); k++)
-    //	cout <<"HausdorffMap1to2: " << HausdorffMap1to2[k] << endl;
+
 
 	ColorMapTest(HausdorffMap1to2,"Hausdorff");
 
