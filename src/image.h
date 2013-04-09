@@ -23,6 +23,8 @@ class Image {
 	Mat grndtrth;
 	Mat NormGrndtrth;
 	Mat NormMethods;
+/*	Mat MapGrndtrth;
+	Mat MapMethods;*/
 	Mat NGrndtrth;
 	Mat NMethods;
 	vector <vector <Point2i> > blobs1;
@@ -32,8 +34,8 @@ class Image {
 	vector<vector<Point> > contours2;
 	vector<Vec4i> hierarchy2;
 	double CenX1, CenY1, CenX2, CenY2;
-	int Map1to2[];
-	int HausdorffMap1to2[];
+	//int Map1to2[];
+	//int HausdorffMap1to2[];
 
 public:
     Image(Mat, Mat);
@@ -42,9 +44,11 @@ public:
     void Normalize();
     void Labeling();
     void ImageStats();
-    void CentroidConstraint(int *);
+    void CentroidConstraint();
     void ColorMap();
-    void HausdorffConstraint(int *, int MinimizeFlag, double MaxDistance);
+    void ColorMapTest(int *Matches,string NameofConstraint);
+
+    void HausdorffConstraint(int MinimizeFlag, double MaxDistance);
     double MinDist(const vector<Point>&,const vector<Point>&);
 //    void SetDistanceConstraint();
 	int Display();
@@ -55,8 +59,8 @@ public:
 
 Image::Image(Mat met, Mat grnd)					//   Constructor
 	{
-		met = imread( "images/test1.png", 0);
-		grnd = imread( "images/test2.png", 0);
+		met = imread( "images/GONG20100719.png", 0);
+		grnd = imread( "images/R420100719.png", 0);
 
 		  if( !met.data || !grnd.data )    // check and make sure image data exists
 		    {
@@ -167,7 +171,7 @@ void Image :: ImageStats()
 	  int idx1 = 0;
 	        for( ; idx1 >= 0; idx1 = hierarchy1[idx1][0] )
 	         {
-	            Scalar color( rand()&255, rand()&255, rand()&255 );
+	            Scalar color(rand()&255, rand()&255, rand()&255);
 	            drawContours( grndtrth, contours1, idx1, color, CV_FILLED, 8, hierarchy1 );
 	        }
 
@@ -180,9 +184,9 @@ void Image :: ImageStats()
 	         }
 }
 
-void Image :: CentroidConstraint(int *Map1to2)
+void Image :: CentroidConstraint()
 {
-
+	int Map1to2[contours1.size()];
     /// Get the moments
       vector<Moments> mu1(contours1.size() );
       for( unsigned int i = 0; i < contours1.size(); i++ )
@@ -259,7 +263,7 @@ void Image :: CentroidConstraint(int *Map1to2)
                 	MinimumCentroid[a] = MinCent;
                 	Map1to2[a] = index;
                }
-
+                ColorMapTest(Map1to2,"Centroid");
                 /*for(unsigned int k = 0; k < contours1.size(); k++)
                 	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;*/
 }
@@ -290,12 +294,12 @@ double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 	//cout << " Haus Dist: " << hausDist << endl;
 	return hausDist;
 }
-void Image :: HausdorffConstraint(int *HausdorffMap1to2,int MinimizeFlag,double MaxDistance)
+void Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
 {
 	vector<pair<size_t,double> > distances;
 	vector<pair<size_t,double> > maxDists1to2;
 	vector<pair<size_t,double> > maxDists2to1;
-	//int HausdorffMap1to2[contours1.size()];
+	int HausdorffMap1to2[contours1.size()];
 
 	for(size_t contour1Index = 0; contour1Index < contours1.size() ; ++contour1Index)
 	{
@@ -366,10 +370,10 @@ void Image :: HausdorffConstraint(int *HausdorffMap1to2,int MinimizeFlag,double 
 				}
 
 	}
-/*    for(unsigned int k = 0; k < contours1.size(); k++)
-    	cout <<"HausdorffMap1to2: " << HausdorffMap1to2[k] << endl;*/
+    //for(unsigned int k = 0; k < contours1.size(); k++)
+    //	cout <<"HausdorffMap1to2: " << HausdorffMap1to2[k] << endl;
 
-	//return *HausdorffMap1to2;
+	ColorMapTest(HausdorffMap1to2,"Hausdorff");
 
 }
 
@@ -395,8 +399,8 @@ void Image :: ColorMap()
 
 	int CentroidMatch[contours1.size()];
 	int HausdorffMatch[contours1.size()];
-	CentroidConstraint(CentroidMatch);
-	HausdorffConstraint(HausdorffMatch,1,200.00);
+	//CentroidConstraint(CentroidMatch);
+	//HausdorffConstraint(HausdorffMatch,1,200.00);
     SingleImageComps(NMethods,blobs2);
     SingleImageComps(NGrndtrth,blobs1);
     unsigned char r, g, b;
@@ -429,13 +433,13 @@ void Image :: ColorMap()
 		             b = 0;
 		             break;
 		        case 5:
-		    	     r = 0;   // purple
-		             g = 255;
+		    	     r = 255;   // purple
+		             g = 0;
 		             b = 255;
 		             break;
 		        case 6:
-		    	     r = 255;		// turqoise
-		             g = 0;
+		    	     r = 0;		// turqoise
+		             g = 255;
 		             b = 255;
 		             break;
 		        case 7:
@@ -560,7 +564,42 @@ void Image :: ColorMap()
 		}
 }
 
+void Image :: ColorMapTest(int *Matches, string NameofConstraint)
+{
 
+
+    Mat MapGrndtrth = cv::Mat::zeros(grndtrth.size(), CV_8UC3);
+    Mat MapMethods = cv::Mat::zeros(methods.size(), CV_8UC3);
+
+	for(unsigned int k = 0; k < contours1.size(); k++)
+		{
+		cout << "[" << (k+1) << "]: ";
+		cout << " " + NameofConstraint + " " << Matches[k] << endl;
+		}
+
+
+	  for( size_t i = 0; i< contours1.size(); i++ )
+	     {
+	       Scalar color = Scalar( rand()%255, rand()%255, rand()%255 );
+	       drawContours( MapGrndtrth, contours1, (int)i, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	       if (Matches[(int)i] == 0)
+	    		   {
+	    		   color = Scalar(0,0,0);
+	    		   }
+	       drawContours( MapMethods, contours2, Matches[(int)i]-1, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	     }
+
+	  namedWindow( NameofConstraint +" Methods", CV_WINDOW_AUTOSIZE );// Create a window for display.
+	  imshow( NameofConstraint +" Methods", MapMethods );  // Show our image inside it.
+	  namedWindow( "Ground Truth ("+NameofConstraint+")", CV_WINDOW_AUTOSIZE );// Create a window for display.
+	  imshow( "Ground Truth ("+NameofConstraint+")", MapGrndtrth );  //
+
+
+
+//	    cout << endl << methods << endl;
+
+
+}
 
 int Image :: Display()
 {
