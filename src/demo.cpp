@@ -13,8 +13,14 @@ using namespace cv;
 using namespace std;
 
 
+
+
 int main( int argc, char** argv )
 {
+	int MATCH_CENTROID = 1;
+	int MATCH_HAUSDORFF = 1;
+	int MATCH_SET = 0;
+	int MATCH_ALL = 1;
 
 	Mat Grndtrth;
 	Mat Methods;
@@ -23,10 +29,7 @@ int main( int argc, char** argv )
 	imgObj.Normalize();
 	imgObj.Labeling();
 	imgObj.ImageStats();
-	imgObj.CentroidConstraint(1,50.00);
-	imgObj.HausdorffConstraint(1,200.00);
-//	imgObj.SetDistanceConstraint();
-
+	imgObj.DisplayMatches(MATCH_CENTROID,MATCH_HAUSDORFF,MATCH_SET,MATCH_ALL);
 //	imgObj.Display();
 	  waitKey(0);      // Wait for a keystroke in the window
 

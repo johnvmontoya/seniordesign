@@ -44,11 +44,13 @@ public:
     void Normalize();
     void Labeling();
     void ImageStats();
-    void CentroidConstraint(int ApplyAreaLimiting, double AreaLimit);
+
     void ColorMap();
     void ColorMapTest(int *Matches,string NameofConstraint);
+    void DisplayMatches(int MatchCentroid,int MatchHausdorff, int MatchSet, int MatchAll);
+    void CentroidConstraint(int *Map1to2,int ApplyAreaLimiting, double AreaLimit);
+    void HausdorffConstraint(int *HausdorffMap1to2,int MinimizeFlag, double MaxDistance);
 
-    void HausdorffConstraint(int MinimizeFlag, double MaxDistance);
     double MinDist(const vector<Point>&,const vector<Point>&);
 //    void SetDistanceConstraint();
 	int Display();
@@ -59,8 +61,9 @@ public:
 
 Image::Image(Mat met, Mat grnd)					//   Constructor
 	{
-		met = imread( "images/GONG20100719.png", 0);
-		grnd = imread( "images/R420100719.png", 0);
+		met = imread( "images/testA.png", 0);
+		grnd = imread( "images/testB.png", 0);
+
 
 		  if( !met.data || !grnd.data )    // check and make sure image data exists
 		    {
@@ -79,8 +82,8 @@ Image::Image(Mat met, Mat grnd)					//   Constructor
 ------------------------------------------------------------------------------------------------------------*/
 void Image :: ImageManip()
 {
-	flip(methods, methods, 0);
-	flip(grndtrth, grndtrth, 0);
+	//flip(methods, methods, 0);
+	//flip(grndtrth, grndtrth, 0);
 
 	resize(methods,methods,grndtrth.size(),CV_INTER_LANCZOS4);
 	resize(grndtrth,grndtrth,grndtrth.size(),CV_INTER_LANCZOS4);
@@ -165,8 +168,8 @@ void Image :: Labeling()
 
 void Image :: ImageStats()
 {
-	findContours(grndtrth,contours1,hierarchy1,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
-	findContours(methods,contours2,hierarchy2,CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE );
+	findContours(grndtrth,contours1,hierarchy1,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE );
+	findContours(methods,contours2,hierarchy2,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE );
 
 	  int idx1 = 0;
 	        for( ; idx1 >= 0; idx1 = hierarchy1[idx1][0] )
@@ -184,9 +187,9 @@ void Image :: ImageStats()
 	         }
 }
 
-void Image :: CentroidConstraint(int ApplyAreaLimiting,double AreaLimit)
+void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaLimit)
 {
-	int Map1to2[contours1.size()];
+	//int Map1to2[contours1.size()];
 	double area1,area2,percentDiff;
     /// Get the moments
       vector<Moments> mu1(contours1.size() );
@@ -278,8 +281,9 @@ void Image :: CentroidConstraint(int ApplyAreaLimiting,double AreaLimit)
                 		 if (percentDiff > AreaLimit)
                 		 {
                 			 Map1to2[k] = 0;
-                			 cout << "Discarding Match" << endl;
+                			 cout << "Discarding Match " << k+1 << endl;
                 		 }
+
                 	}
 
                 }
@@ -288,7 +292,7 @@ void Image :: CentroidConstraint(int ApplyAreaLimiting,double AreaLimit)
 
 
 
-                ColorMapTest(Map1to2,"Centroid");
+                //ColorMapTest(Map1to2,"Centroid");
                 /*for(unsigned int k = 0; k < contours1.size(); k++)
                 	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;*/
 }
@@ -319,12 +323,12 @@ double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 	//cout << " Haus Dist: " << hausDist << endl;
 	return hausDist;
 }
-void Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
+void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double MaxDistance)
 {
 	vector<pair<size_t,double> > distances;
 	vector<pair<size_t,double> > maxDists1to2;
 	vector<pair<size_t,double> > maxDists2to1;
-	int HausdorffMap1to2[contours1.size()];
+	//int HausdorffMap1to2[contours1.size()];
 
 	for(size_t contour1Index = 0; contour1Index < contours1.size() ; ++contour1Index)
 	{
@@ -382,6 +386,7 @@ void Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
 				{
 					if (it->second < MaxDistance)
 					{
+
 						HausdorffMap1to2[(it - maxDists1to2.begin())]=it->first;
 					}
 					else
@@ -398,7 +403,7 @@ void Image :: HausdorffConstraint(int MinimizeFlag,double MaxDistance)
     //for(unsigned int k = 0; k < contours1.size(); k++)
 
 
-	ColorMapTest(HausdorffMap1to2,"Hausdorff");
+	//ColorMapTest(HausdorffMap1to2,"Hausdorff");
 
 }
 
@@ -592,39 +597,189 @@ void Image :: ColorMap()
 void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 {
 
+	//TODO: Accept vector of arrays as input
+
+	//FIX: Weird match on 20110113 image (Hausdorff) - Related to that image?
+
+
+	/*				 (255,0,0) //red
+		             (0,255,0)	// green
+		    	     (0,0,255) //blue
+		             (255,255,0)	// yellow
+		    	     (255,0,255)   // purple
+		             (0,255,255)		// turqoise
+		             (255,255,255)	//  white
+		             (255,153,0)			// Orange
+		             (255,102,153)		// Pink*/
+	Scalar colorWheel[]={Scalar(255,0,0),Scalar(0,255,0),Scalar(0,0,255),Scalar(255,255,0),Scalar(255,0,255),Scalar(0,255,255),Scalar(255,255,255),Scalar(255,153,0),Scalar(255,102,153),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255)};
+
 
     Mat MapGrndtrth = cv::Mat::zeros(grndtrth.size(), CV_8UC3);
     Mat MapMethods = cv::Mat::zeros(methods.size(), CV_8UC3);
-
+    Mat Legend = cv::Mat::zeros(methods.size(), CV_8UC3);
+    std::stringstream ss;
 	for(unsigned int k = 0; k < contours1.size(); k++)
 		{
 		cout << "[" << (k+1) << "]: ";
 		cout << " " + NameofConstraint + " " << Matches[k] << endl;
 		}
 
+	  cv::putText(Legend, "Methods", Point(20,25), CV_FONT_HERSHEY_PLAIN,2,Scalar(255,255,255),2,8);
+	  cv::putText(Legend, "Ground Truth", Point(280,25), CV_FONT_HERSHEY_PLAIN,2,Scalar(255,255,255),2,8);
 
 	  for( size_t i = 0; i< contours1.size(); i++ )
 	     {
-	       Scalar color = Scalar( rand()%255, rand()%255, rand()%255 );
-	       drawContours( MapGrndtrth, contours1, (int)i, color, CV_FILLED, 8, hierarchy1, 0, Point() );
-	       if (Matches[(int)i] == 0)
+	      Scalar color = Scalar (colorWheel[(int)i]);
+		  //Scalar color = Scalar(rand()%255,rand()%155,rand()%255);
+	      ss.str("");
+	      ss.clear();
+	      ss << "Component " << i+1;
+	      drawContours( MapMethods, contours1, (int)i, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	      putText(Legend, ss.str(), Point(20,(int)i*30+50), CV_FONT_HERSHEY_PLAIN,2,color,2,8);
+	      cv::rectangle(Legend,Point(0,(int)i*30+50),Point(20,(int)i*30+30),color,CV_FILLED,8);
+	      if (Matches[(int)i] == 0)
 	    		   {
 	    		   color = Scalar(0,0,0);
 	    		   }
-	       drawContours( MapMethods, contours2, Matches[(int)i]-1, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	      drawContours( MapGrndtrth, contours2, Matches[(int)i]-1, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	      ss.str("");
+	      ss.clear();
+	      ss << "Component " << Matches[(int)i];
+	      putText(Legend, ss.str(), Point(300,(int)i*30+50), CV_FONT_HERSHEY_PLAIN,2,color,2,8);
+	      cv::rectangle(Legend,Point(280,(int)i*30+50),Point(300,(int)i*30+30),color,CV_FILLED,8);
 	     }
 
 	  namedWindow( NameofConstraint +" Methods", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	  imshow( NameofConstraint +" Methods", MapMethods );  // Show our image inside it.
 	  namedWindow( "Ground Truth ("+NameofConstraint+")", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	  imshow( "Ground Truth ("+NameofConstraint+")", MapGrndtrth );  //
-
+	  namedWindow( "Legend ("+NameofConstraint+")", CV_WINDOW_AUTOSIZE );// Create a window for display.
+	  imshow( "Legend ("+NameofConstraint+")", Legend );  //
 
 
 //	    cout << endl << methods << endl;
 
 
 }
+void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet, int MatchAll)
+{
+	int HausdorffMap1to2[contours1.size()];
+	int CentroidMap1to2[contours1.size()];
+	int SetMap1to2[contours1.size()];
+	int AllMap1to2[contours1.size()];
+
+	if (MatchCentroid == 1)
+	{
+		CentroidConstraint(CentroidMap1to2,0,20.00);
+		ColorMapTest(CentroidMap1to2,"Centroid");
+	}
+	if (MatchHausdorff == 1)
+	{
+		HausdorffConstraint(HausdorffMap1to2,1,75.00);
+		ColorMapTest(HausdorffMap1to2,"Hausdorff");
+	}
+
+	if (MatchAll == 1)
+	{
+		if(MatchHausdorff ==0 && MatchCentroid == 0 && MatchSet == 0)
+		{
+			cout << "No Constraints selected!" << endl;
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				AllMap1to2[k] = 0;
+			}
+
+		}
+		else if(MatchHausdorff ==0 && MatchCentroid == 0 && MatchSet == 1)
+		{
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				AllMap1to2[k] = SetMap1to2[k];
+			}
+
+		}
+		else if(MatchHausdorff ==0 && MatchCentroid == 1 && MatchSet == 0)
+		{
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				AllMap1to2[k] = CentroidMap1to2[k];
+			}
+
+		}
+		else if(MatchHausdorff ==0 && MatchCentroid == 1 && MatchSet == 1)
+		{
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				if (CentroidMap1to2[k] == SetMap1to2[k])
+				{
+					AllMap1to2[k] = CentroidMap1to2[k];
+				}
+				else
+				{
+					AllMap1to2[k] = 0;
+				}
+			}
+
+		}
+		else if(MatchHausdorff ==1 && MatchCentroid == 0 && MatchSet == 0)
+		{
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				AllMap1to2[k] = HausdorffMap1to2[k];
+			}
+
+		}
+		else if(MatchHausdorff ==1 && MatchCentroid == 0 && MatchSet == 1)
+		{
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				if (SetMap1to2[k] == CentroidMap1to2[k])
+				{
+					AllMap1to2[k] = SetMap1to2[k];
+				}
+				else
+				{
+					AllMap1to2[k] = 0;
+				}
+			}
+
+		}
+		else if(MatchHausdorff ==1 && MatchCentroid == 1 && MatchSet == 0)
+		{
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				if (HausdorffMap1to2[k] == CentroidMap1to2[k])
+				{
+					AllMap1to2[k] = HausdorffMap1to2[k];
+				}
+				else
+				{
+					AllMap1to2[k] = 0;
+				}
+			}
+
+		}
+		else if(MatchHausdorff ==1 && MatchCentroid == 1 && MatchSet == 1)
+		{
+			for(unsigned int k = 0; k < contours1.size(); k++)
+			{
+				if (HausdorffMap1to2[k] == CentroidMap1to2[k] && HausdorffMap1to2[k] == SetMap1to2[k])
+				{
+					AllMap1to2[k] = HausdorffMap1to2[k];
+				}
+				else
+				{
+					AllMap1to2[k] = 0;
+				}
+			}
+
+		}
+
+		ColorMapTest(AllMap1to2,"All");
+	}
+
+}
+
 
 int Image :: Display()
 {
