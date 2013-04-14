@@ -1,5 +1,5 @@
-/*
- * image.h
+
+ /* image.h
  *
  *  Created on: Feb 9, 2013
  *      Author: face52
@@ -48,7 +48,7 @@ public:
     void ColorMap();
     void ColorMapTest(int *Matches,string NameofConstraint);
     void DisplayMatches(int MatchCentroid,int MatchHausdorff, int MatchSet, int MatchAll);
-    void CentroidConstraint(int *Map1to2,int ApplyAreaLimiting, double AreaLimit);
+    void CentroidConstraint(int *CentroidMap1to2,int ApplyAreaLimiting, double AreaLimit);
     void HausdorffConstraint(int *HausdorffMap1to2,int MinimizeFlag, double MaxDistance);
 
     double MinDist(const vector<Point>&,const vector<Point>&);
@@ -61,8 +61,8 @@ public:
 
 Image::Image(Mat met, Mat grnd)					//   Constructor
 	{
-		met = imread( "images/testA.png", 0);
-		grnd = imread( "images/testB.png", 0);
+		met = imread( "images/contour_GONG_20100807.png", 0);
+		grnd = imread( "images/R4_1_drawn_euvi_new_20100807.png", 0);
 
 
 		  if( !met.data || !grnd.data )    // check and make sure image data exists
@@ -187,9 +187,9 @@ void Image :: ImageStats()
 	         }
 }
 
-void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaLimit)
+void Image :: CentroidConstraint(int *CentroidMap1to2,int ApplyAreaLimiting,double AreaLimit)
 {
-	//int Map1to2[gtContours.size()];
+	int Map1to2[gtContours.size()];
 	double area1,area2,percentDiff;
     /// Get the moments
       vector<Moments> mu1(gtContours.size() );
@@ -271,10 +271,10 @@ void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaL
                 //Apply Area limit to centroid constraint.
                 if (ApplyAreaLimiting == 1)
                 {
-                	for(unsigned int k = 0; k < mContours.size() ; k++)
+                	for(unsigned int k = 0; k < gtContours.size() ; k++)
                 	{
-                		 area1=contourArea(mContours[k]);
-                		 area2=contourArea(gtContours[Map1to2[k]-1]);
+                		 area1=contourArea(gtContours[k]);
+                		 area2=contourArea(mContours[Map1to2[k]-1]);
                 		 percentDiff=(abs((area2 - area1) / ((area1 + area2)/2))*100);
                 		 cout << "Area " << area1 <<" vs. " << area2 << endl;
                 		 cout << percentDiff <<"% difference" << endl;
@@ -293,8 +293,20 @@ void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaL
 
 
                 //ColorMapTest(Map1to2,"Centroid");
-                /*for(unsigned int k = 0; k < gtContours.size(); k++)
-                	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;*/
+                for( size_t i = 0; i< gtContours.size(); i++ )
+                	cout <<"Map1to2: [" << Map1to2[i] <<"]  " << MinimumCentroid[i] << endl;
+                for( size_t j = 0; j< mContours.size(); j++ )
+                {
+                	CentroidMap1to2[j] = 0;
+                }
+                for( size_t k = 0; k< gtContours.size(); k++ )
+                {
+                	cout <<  " k: " << k << " Map1to2: " << Map1to2[k] << endl;
+                	CentroidMap1to2[Map1to2[k]-1]=k+1;
+
+                }
+
+
 }
 double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 {
@@ -602,15 +614,6 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 	//FIX: Weird match on 20110113 image (Hausdorff) - Related to that image?
 
 
-	/*				 (255,0,0) //red
-		             (0,255,0)	// green
-		    	     (0,0,255) //blue
-		             (255,255,0)	// yellow
-		    	     (255,0,255)   // purple
-		             (0,255,255)		// turqoise
-		             (255,255,255)	//  white
-		             (255,153,0)			// Orange
-		             (255,102,153)		// Pink*/
 	Scalar colorWheel[]={Scalar(255,0,0),Scalar(0,255,0),Scalar(0,0,255),Scalar(255,255,0),Scalar(255,0,255),Scalar(0,255,255),Scalar(255,255,255),Scalar(255,153,0),Scalar(255,102,153),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255)};
 
 
@@ -637,16 +640,16 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 	      drawContours( MapMethods, mContours, (int)i, color, CV_FILLED, 8, hierarchy1, 0, Point() );
 	      putText(Legend, ss.str(), Point(20,(int)i*30+50), CV_FONT_HERSHEY_PLAIN,2,color,2,8);
 	      cv::rectangle(Legend,Point(0,(int)i*30+50),Point(20,(int)i*30+30),color,CV_FILLED,8);
-	      if (Matches[(int)i] == 0)
+	      if (Matches[(int)i] != 0)
 	    		   {
-	    		   color = Scalar(0,0,0);
+	    	  	  	  drawContours( MapGrndtrth, gtContours, Matches[(int)i]-1, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	    		      ss.str("");
+	    		      ss.clear();
+	    		      ss << "Component " << Matches[(int)i];
+	    		      putText(Legend, ss.str(), Point(300,(int)i*30+50), CV_FONT_HERSHEY_PLAIN,2,color,2,8);
+	    		      cv::rectangle(Legend,Point(280,(int)i*30+50),Point(300,(int)i*30+30),color,CV_FILLED,8);
+
 	    		   }
-	      drawContours( MapGrndtrth, gtContours, Matches[(int)i]-1, color, CV_FILLED, 8, hierarchy1, 0, Point() );
-	      ss.str("");
-	      ss.clear();
-	      ss << "Component " << Matches[(int)i];
-	      putText(Legend, ss.str(), Point(300,(int)i*30+50), CV_FONT_HERSHEY_PLAIN,2,color,2,8);
-	      cv::rectangle(Legend,Point(280,(int)i*30+50),Point(300,(int)i*30+30),color,CV_FILLED,8);
 	     }
 
 	  namedWindow( NameofConstraint +" Methods", CV_WINDOW_AUTOSIZE );// Create a window for display.
@@ -656,7 +659,10 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 	  namedWindow( "Legend ("+NameofConstraint+")", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	  imshow( "Legend ("+NameofConstraint+")", Legend );  //
 
-
+	  //Write the images to files
+	  imwrite("methods-"+NameofConstraint+".png",MapMethods);
+	  imwrite("grndtrth-"+NameofConstraint+".png",MapGrndtrth);
+	  imwrite("legend-"+NameofConstraint+".png",Legend);
 //	    cout << endl << methods << endl;
 
 
@@ -670,7 +676,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 
 	if (MatchCentroid == 1)
 	{
-		CentroidConstraint(CentroidMap1to2,0,20.00);
+		CentroidConstraint(CentroidMap1to2,1,100.00);
 		ColorMapTest(CentroidMap1to2,"Centroid");
 	}
 	if (MatchHausdorff == 1)
