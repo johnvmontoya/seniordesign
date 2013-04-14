@@ -29,9 +29,9 @@ class Image {
 	Mat NMethods;
 	vector <vector <Point2i> > blobs1;
 	vector <vector <Point2i> > blobs2;
-	vector<vector<Point> > contours1;
+	vector<vector<Point> > gtContours;
 	vector<Vec4i> hierarchy1;
-	vector<vector<Point> > contours2;
+	vector<vector<Point> > mContours;
 	vector<Vec4i> hierarchy2;
 	double CenX1, CenY1, CenX2, CenY2;
 	//int Map1to2[];
@@ -168,14 +168,14 @@ void Image :: Labeling()
 
 void Image :: ImageStats()
 {
-	findContours(grndtrth,contours1,hierarchy1,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE );
-	findContours(methods,contours2,hierarchy2,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE );
+	findContours(grndtrth,gtContours,hierarchy1,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE );
+	findContours(methods,mContours,hierarchy2,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE );
 
 	  int idx1 = 0;
 	        for( ; idx1 >= 0; idx1 = hierarchy1[idx1][0] )
 	         {
 	            Scalar color(rand()&255, rand()&255, rand()&255);
-	            drawContours( grndtrth, contours1, idx1, color, CV_FILLED, 8, hierarchy1 );
+	            drawContours( grndtrth, gtContours, idx1, color, CV_FILLED, 8, hierarchy1 );
 	        }
 
 
@@ -183,60 +183,60 @@ void Image :: ImageStats()
 	        for( ; idx2 >= 0; idx2 = hierarchy2[idx2][0] )
 	         {
 	             Scalar color( rand()&255, rand()&255, rand()&255 );
-	             drawContours( methods, contours2, idx2, color, CV_FILLED, 8, hierarchy2 );
+	             drawContours( methods, mContours, idx2, color, CV_FILLED, 8, hierarchy2 );
 	         }
 }
 
 void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaLimit)
 {
-	//int Map1to2[contours1.size()];
+	//int Map1to2[gtContours.size()];
 	double area1,area2,percentDiff;
     /// Get the moments
-      vector<Moments> mu1(contours1.size() );
-      for( unsigned int i = 0; i < contours1.size(); i++ )
-         { mu1[i] = moments( contours1[i], false ); }
+      vector<Moments> mu1(gtContours.size() );
+      for( unsigned int i = 0; i < gtContours.size(); i++ )
+         { mu1[i] = moments( gtContours[i], false ); }
 
       ///  Get the Methods Centroids:
-      vector<Point2f> centroid1( contours1.size() );
-      for( unsigned int j = 0; j < contours1.size(); j++ )
+      vector<Point2f> centroid1( gtContours.size() );
+      for( unsigned int j = 0; j < gtContours.size(); j++ )
          { centroid1[j] = Point2f( mu1[j].m10/mu1[j].m00 , mu1[j].m01/mu1[j].m00 ); }
 
 
-      vector<Moments> mu2(contours2.size() );
-      for( unsigned int i = 0; i < contours2.size(); i++ )
-         { mu2[i] = moments( contours2[i], false ); }
+      vector<Moments> mu2(mContours.size() );
+      for( unsigned int i = 0; i < mContours.size(); i++ )
+         { mu2[i] = moments( mContours[i], false ); }
 
       ///  Get the GrndtrthCentroids:
-      vector<Point2f> centroid2( contours2.size() );
-      for( unsigned int j = 0; j < contours2.size(); j++ )
+      vector<Point2f> centroid2( mContours.size() );
+      for( unsigned int j = 0; j < mContours.size(); j++ )
          { centroid2[j] = Point2f( mu2[j].m10/mu2[j].m00 , mu2[j].m01/mu2[j].m00 ); }
 
 
 
       //printf("\t Info: Area and Contour Length \n");
-              /*for( unsigned int k = 0; k< contours1.size(); k++ )
+              /*for( unsigned int k = 0; k< gtContours.size(); k++ )
                  {
                  	 cout <<" * Methods Centroids: Component[" << k << "] X coord: " << centroid1[k].x << " Y coord: " << centroid1[k].y << endl;
                  }
 
                 cout << endl;*/
 
-/*                for( unsigned int k = 0; k< contours2.size(); k++ )
+/*                for( unsigned int k = 0; k< mContours.size(); k++ )
                    {
                    	   cout <<" * Ground Truth Centroids: Component[" << k << "] X coord: " << centroid2[k].x << " Y coord: " << centroid2[k].y << endl;
                    }*/
 
 
                 double MinCent;
-                double MinimumCentroid[contours1.size()];
-                double TempCent[contours2.size()];
+                double MinimumCentroid[gtContours.size()];
+                double TempCent[mContours.size()];
                 int TempIndex;
                 int index;
-                //int Map1to2[contours1.size()]; JM - MERGE?
+                //int Map1to2[gtContours.size()]; JM - MERGE?
 
-                for(unsigned int a = 0; a < contours1.size(); a++)
+                for(unsigned int a = 0; a < gtContours.size(); a++)
                 {
-                	for (unsigned int  b = 0; b < contours2.size(); b++)
+                	for (unsigned int  b = 0; b < mContours.size(); b++)
                 	   {
                 		CenX1 = centroid1[a].x;
                 		CenY1 = centroid1[a].y;
@@ -254,7 +254,7 @@ void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaL
                 	TempIndex = 1;
                 	index = 1;
 
-                	for(unsigned int c = 1;c < contours2.size(); c++)
+                	for(unsigned int c = 1;c < mContours.size(); c++)
                 	{
                    		TempIndex++;
                 		if(MinCent > TempCent[c])
@@ -271,10 +271,10 @@ void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaL
                 //Apply Area limit to centroid constraint.
                 if (ApplyAreaLimiting == 1)
                 {
-                	for(unsigned int k = 0; k < contours1.size() ; k++)
+                	for(unsigned int k = 0; k < mContours.size() ; k++)
                 	{
-                		 area1=contourArea(contours1[k]);
-                		 area2=contourArea(contours2[Map1to2[k]-1]);
+                		 area1=contourArea(mContours[k]);
+                		 area2=contourArea(gtContours[Map1to2[k]-1]);
                 		 percentDiff=(abs((area2 - area1) / ((area1 + area2)/2))*100);
                 		 cout << "Area " << area1 <<" vs. " << area2 << endl;
                 		 cout << percentDiff <<"% difference" << endl;
@@ -293,7 +293,7 @@ void Image :: CentroidConstraint(int *Map1to2,int ApplyAreaLimiting,double AreaL
 
 
                 //ColorMapTest(Map1to2,"Centroid");
-                /*for(unsigned int k = 0; k < contours1.size(); k++)
+                /*for(unsigned int k = 0; k < gtContours.size(); k++)
                 	cout <<"Map1to2: [" << Map1to2[k] <<"]  " << MinimumCentroid[k] << endl;*/
 }
 double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
@@ -328,31 +328,31 @@ void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double
 	vector<pair<size_t,double> > distances;
 	vector<pair<size_t,double> > maxDists1to2;
 	vector<pair<size_t,double> > maxDists2to1;
-	//int HausdorffMap1to2[contours1.size()];
+	//int HausdorffMap1to2[gtContours.size()];
 
-	for(size_t contour1Index = 0; contour1Index < contours1.size() ; ++contour1Index)
+	for(size_t mContourIndex = 0; mContourIndex < mContours.size() ; ++mContourIndex)
 	{
 
 		//cout << "Contour size: " << contour1->size() << endl;
 		//cout << "Contour: " << *contour << endl;
 		//This gives each contour as an array of points
 
-		vector<Point> currContour1 = contours1[contour1Index];
+		vector<Point> currContour1 = mContours[mContourIndex];
 
 		size_t minDistanceIndex = 0;
 
 		double minimumDistance = DBL_MAX;
 
-		//cout << "Contour: " << contour1Index <<endl;
+		//cout << "Contour: " << mContourIndex <<endl;
 		//Iterate through each component and find the max distance to each other component
 
-		for(size_t contour2Index = 0; contour2Index != contours2.size(); ++contour2Index)
+		for(size_t gtContourIndex = 0; gtContourIndex != gtContours.size(); ++gtContourIndex)
 		{
-			vector<Point> currContour2 = contours2[contour2Index];
+			vector<Point> currContour2 = gtContours[gtContourIndex];
 
-			//cout << contour1Index << " to " << contour2Index;
+			//cout << mContourIndex << " to " << gtContourIndex;
 			double currMinDist = MinDist(currContour1,currContour2);
-			//cout << contour2Index << " to " << contour1Index;
+			//cout << gtContourIndex << " to " << mContourIndex;
 			double currMinDist2 = MinDist(currContour2,currContour1);
 
 			double hausDist = max(currMinDist,currMinDist2);
@@ -361,10 +361,10 @@ void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double
 			if(hausDist < minimumDistance)
 			{
 				minimumDistance = hausDist;
-				minDistanceIndex = contour2Index;
+				minDistanceIndex = gtContourIndex;
 			}
 
-			if (contour2Index == contours2.size() - 1)
+			if (gtContourIndex == gtContours.size() - 1)
 			{
 				//cout << "Match Distance: " << minimumDistance << " @ Index: " << minDistanceIndex+1 << endl;
 				maxDists1to2.push_back(pair<size_t,double>(minDistanceIndex+1,minimumDistance));
@@ -400,7 +400,7 @@ void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double
 				}
 
 	}
-    //for(unsigned int k = 0; k < contours1.size(); k++)
+    //for(unsigned int k = 0; k < gtContours.size(); k++)
 
 
 	//ColorMapTest(HausdorffMap1to2,"Hausdorff");
@@ -415,8 +415,8 @@ void Image :: SetDistanceConstraint()
 	Mat methods_labeled = NormMethods;
 
 
-//	for(unsigned int a = 0;a < contours1.size(); a++)
-//		for(unsigned int b = 0;b < contours2.size(); b++)
+//	for(unsigned int a = 0;a < gtContours.size(); a++)
+//		for(unsigned int b = 0;b < mContours.size(); b++)
 //		{
 
 //		}
@@ -427,8 +427,8 @@ void Image :: SetDistanceConstraint()
 void Image :: ColorMap()
 {
 
-	int CentroidMatch[contours1.size()];
-	int HausdorffMatch[contours1.size()];
+	int CentroidMatch[mContours.size()];
+	int HausdorffMatch[gtContours.size()];
 	//CentroidConstraint(CentroidMatch);
 	//HausdorffConstraint(HausdorffMatch,1,200.00);
     SingleImageComps(NMethods,blobs2);
@@ -586,7 +586,7 @@ void Image :: ColorMap()
 	            }
 	        }
 
-		for(unsigned int k = 0; k < contours1.size(); k++)
+		for(unsigned int k = 0; k < gtContours.size(); k++)
 		{
 			cout << "Component " << (k+1) << ":" << endl;
 			cout << "	Centroid Match: " << CentroidMatch[k] << endl;
@@ -618,7 +618,7 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
     Mat MapMethods = cv::Mat::zeros(methods.size(), CV_8UC3);
     Mat Legend = cv::Mat::zeros(methods.size(), CV_8UC3);
     std::stringstream ss;
-	for(unsigned int k = 0; k < contours1.size(); k++)
+	for(unsigned int k = 0; k < mContours.size(); k++)
 		{
 		cout << "[" << (k+1) << "]: ";
 		cout << " " + NameofConstraint + " " << Matches[k] << endl;
@@ -627,21 +627,21 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 	  cv::putText(Legend, "Methods", Point(20,25), CV_FONT_HERSHEY_PLAIN,2,Scalar(255,255,255),2,8);
 	  cv::putText(Legend, "Ground Truth", Point(280,25), CV_FONT_HERSHEY_PLAIN,2,Scalar(255,255,255),2,8);
 
-	  for( size_t i = 0; i< contours1.size(); i++ )
+	  for( size_t i = 0; i< mContours.size(); i++ )
 	     {
 	      Scalar color = Scalar (colorWheel[(int)i]);
 		  //Scalar color = Scalar(rand()%255,rand()%155,rand()%255);
 	      ss.str("");
 	      ss.clear();
 	      ss << "Component " << i+1;
-	      drawContours( MapMethods, contours1, (int)i, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	      drawContours( MapMethods, mContours, (int)i, color, CV_FILLED, 8, hierarchy1, 0, Point() );
 	      putText(Legend, ss.str(), Point(20,(int)i*30+50), CV_FONT_HERSHEY_PLAIN,2,color,2,8);
 	      cv::rectangle(Legend,Point(0,(int)i*30+50),Point(20,(int)i*30+30),color,CV_FILLED,8);
 	      if (Matches[(int)i] == 0)
 	    		   {
 	    		   color = Scalar(0,0,0);
 	    		   }
-	      drawContours( MapGrndtrth, contours2, Matches[(int)i]-1, color, CV_FILLED, 8, hierarchy1, 0, Point() );
+	      drawContours( MapGrndtrth, gtContours, Matches[(int)i]-1, color, CV_FILLED, 8, hierarchy1, 0, Point() );
 	      ss.str("");
 	      ss.clear();
 	      ss << "Component " << Matches[(int)i];
@@ -663,10 +663,10 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 }
 void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet, int MatchAll)
 {
-	int HausdorffMap1to2[contours1.size()];
-	int CentroidMap1to2[contours1.size()];
-	int SetMap1to2[contours1.size()];
-	int AllMap1to2[contours1.size()];
+	int HausdorffMap1to2[mContours.size()];
+	int CentroidMap1to2[mContours.size()];
+	int SetMap1to2[mContours.size()];
+	int AllMap1to2[mContours.size()];
 
 	if (MatchCentroid == 1)
 	{
@@ -684,7 +684,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		if(MatchHausdorff ==0 && MatchCentroid == 0 && MatchSet == 0)
 		{
 			cout << "No Constraints selected!" << endl;
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				AllMap1to2[k] = 0;
 			}
@@ -692,7 +692,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		}
 		else if(MatchHausdorff ==0 && MatchCentroid == 0 && MatchSet == 1)
 		{
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				AllMap1to2[k] = SetMap1to2[k];
 			}
@@ -700,7 +700,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		}
 		else if(MatchHausdorff ==0 && MatchCentroid == 1 && MatchSet == 0)
 		{
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				AllMap1to2[k] = CentroidMap1to2[k];
 			}
@@ -708,7 +708,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		}
 		else if(MatchHausdorff ==0 && MatchCentroid == 1 && MatchSet == 1)
 		{
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				if (CentroidMap1to2[k] == SetMap1to2[k])
 				{
@@ -723,7 +723,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		}
 		else if(MatchHausdorff ==1 && MatchCentroid == 0 && MatchSet == 0)
 		{
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				AllMap1to2[k] = HausdorffMap1to2[k];
 			}
@@ -731,7 +731,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		}
 		else if(MatchHausdorff ==1 && MatchCentroid == 0 && MatchSet == 1)
 		{
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				if (SetMap1to2[k] == CentroidMap1to2[k])
 				{
@@ -746,7 +746,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		}
 		else if(MatchHausdorff ==1 && MatchCentroid == 1 && MatchSet == 0)
 		{
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				if (HausdorffMap1to2[k] == CentroidMap1to2[k])
 				{
@@ -761,7 +761,7 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 		}
 		else if(MatchHausdorff ==1 && MatchCentroid == 1 && MatchSet == 1)
 		{
-			for(unsigned int k = 0; k < contours1.size(); k++)
+			for(unsigned int k = 0; k < mContours.size(); k++)
 			{
 				if (HausdorffMap1to2[k] == CentroidMap1to2[k] && HausdorffMap1to2[k] == SetMap1to2[k])
 				{
