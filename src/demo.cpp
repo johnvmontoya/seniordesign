@@ -17,6 +17,7 @@ using namespace std;
 
 int main( int argc, char** argv )
 {
+	//Choose constraints to run here! Parameters are set in DisplayMatches function
 	int MATCH_CENTROID = 1;
 	int MATCH_HAUSDORFF = 1;
 	int MATCH_SET = 0;
@@ -27,11 +28,10 @@ int main( int argc, char** argv )
 	Image imgObj (Methods, Grndtrth);
 	imgObj.ImageManip();
 	imgObj.Normalize();
-	imgObj.Labeling();
+
 	imgObj.ImageStats();
 	imgObj.DisplayMatches(MATCH_CENTROID,MATCH_HAUSDORFF,MATCH_SET,MATCH_ALL);
-//	imgObj.Display();
-	  waitKey(0);      // Wait for a keystroke in the window
+    waitKey(0);      // Wait for a keystroke in the window
 
 
 }

@@ -23,8 +23,6 @@ class Image {
 	Mat grndtrth;
 	Mat NormGrndtrth;
 	Mat NormMethods;
-/*	Mat MapGrndtrth;
-	Mat MapMethods;*/
 	Mat NGrndtrth;
 	Mat NMethods;
 	vector <vector <Point2i> > blobs1;
@@ -34,26 +32,19 @@ class Image {
 	vector<vector<Point> > mContours;
 	vector<Vec4i> hierarchy2;
 	double CenX1, CenY1, CenX2, CenY2;
-	//int Map1to2[];
-	//int HausdorffMap1to2[];
 
 public:
     Image(Mat, Mat);
 
 	void ImageManip();
     void Normalize();
-    void Labeling();
     void ImageStats();
-
-    void ColorMap();
-    void ColorMapTest(int *Matches,string NameofConstraint);
+    void ColorMap(int *Matches,string NameofConstraint);
     void DisplayMatches(int MatchCentroid,int MatchHausdorff, int MatchSet, int MatchAll);
     void CentroidConstraint(int *CentroidMap1to2,int ApplyAreaLimiting, double AreaLimit);
     void HausdorffConstraint(int *HausdorffMap1to2,int MinimizeFlag, double MaxDistance);
-
     double MinDist(const vector<Point>&,const vector<Point>&);
-//    void SetDistanceConstraint();
-	int Display();
+//  void SetDistanceConstraint();
 
 };
 
@@ -61,8 +52,8 @@ public:
 
 Image::Image(Mat met, Mat grnd)					//   Constructor
 	{
-		met = imread( "images/contour_GONG_20100807.png", 0);
-		grnd = imread( "images/R4_1_drawn_euvi_new_20100807.png", 0);
+		met = imread( "images/contour_GONG_20091014.png", 0);
+		grnd = imread( "images/R4_1_drawn_euvi_new_20091014.png", 0);
 
 
 		  if( !met.data || !grnd.data )    // check and make sure image data exists
@@ -111,60 +102,6 @@ void Image :: Normalize()
 
 
 
-void Image :: Labeling()
-{
-    vector <vector <Point2i> > blobs1;
-    vector <vector <Point2i> > blobs2;
-    NormGrndtrth = cv::Mat::zeros(grndtrth.size(), CV_8UC3);
-    NormMethods = cv::Mat::zeros(methods.size(), CV_8UC3);
-    threshold(methods,NMethods,0.0,1.0,THRESH_BINARY);
-    threshold(grndtrth,NGrndtrth,0.0,1.0,THRESH_BINARY);
-    SingleImageComps(NMethods,blobs2);
-    SingleImageComps(NGrndtrth,blobs1);
-    unsigned char n,m;
-    m = 1;
-    n = 1;
-
-    for(size_t i=0; i < blobs1.size(); i++)
-      {
-         unsigned char r = m;
-         unsigned char g = m;
-         unsigned char b = m;
-
-         for(size_t j=0; j < blobs1[i].size(); j++)
-           {
-                int x = blobs1[i][j].x;
-                int y = blobs1[i][j].y;
-
-                NormGrndtrth.at<Vec3b>(y,x)[0] = b;
-                NormGrndtrth.at<Vec3b>(y,x)[1] = g;
-                NormGrndtrth.at<Vec3b>(y,x)[2] = r;
-            }
-         m++;
-        }
-
-
-
-    for(size_t i=0; i < blobs2.size(); i++)
-      {
-          unsigned char r = n;
-          unsigned char g = n;
-          unsigned char b = n;
-
-          for(size_t j=0; j < blobs2[i].size(); j++)
-            {
-                int x = blobs2[i][j].x;
-                int y = blobs2[i][j].y;
-
-                NormMethods.at<Vec3b>(y,x)[0] = b;
-                NormMethods.at<Vec3b>(y,x)[1] = g;
-                NormMethods.at<Vec3b>(y,x)[2] = r;
-            }
-          n++;
-        }
-}
-
-
 
 void Image :: ImageStats()
 {
@@ -189,6 +126,10 @@ void Image :: ImageStats()
 
 void Image :: CentroidConstraint(int *CentroidMap1to2,int ApplyAreaLimiting,double AreaLimit)
 {
+// inputs:
+// CenroidMap1to2 - pointer to array to store matches
+// ApplyAreaLimiting - turn Area Limiting on (1) or off (0)
+// AreaLimit - % match of area to apply for AreaLimiting
 	int Map1to2[gtContours.size()];
 	double area1,area2,percentDiff;
     /// Get the moments
@@ -292,7 +233,7 @@ void Image :: CentroidConstraint(int *CentroidMap1to2,int ApplyAreaLimiting,doub
 
 
 
-                //ColorMapTest(Map1to2,"Centroid");
+
                 for( size_t i = 0; i< gtContours.size(); i++ )
                 	cout <<"Map1to2: [" << Map1to2[i] <<"]  " << MinimumCentroid[i] << endl;
                 for( size_t j = 0; j< mContours.size(); j++ )
@@ -310,8 +251,10 @@ void Image :: CentroidConstraint(int *CentroidMap1to2,int ApplyAreaLimiting,doub
 }
 double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 {
+// Computes minimum Euclidean distance between two points
+// Used by Hausdorff Constraint
 	double shortest;
-	double hausDist = -1;
+	double hausDist = -1; //place holder for Hausdorff Distance to return
 	vector<Point>::const_iterator point1;
 	vector<Point>::const_iterator point2;
 	for(point1 = c1.begin(); point1 != c1.end(); ++point1)
@@ -332,11 +275,16 @@ double Image :: MinDist(const vector<Point>& c1,const vector<Point>& c2)
 
 	}
 
-	//cout << " Haus Dist: " << hausDist << endl;
-	return hausDist;
+	return hausDist; //Return hausdorff distance
 }
 void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double MaxDistance)
 {
+// Finds Hausdorff distance between all components in each input contour
+// After computing Hausdorff distance, selects minimum Hausdorff distance as best match for each component
+// inputs:
+// HausdorffMap1to2 - pointer to array to store matches
+// MinimizeFlag - turn distance minimizing on (1) or off (0)
+// MaxDistance - Distance to apply for distance minimization
 	vector<pair<size_t,double> > distances;
 	vector<pair<size_t,double> > maxDists1to2;
 	vector<pair<size_t,double> > maxDists2to1;
@@ -345,30 +293,21 @@ void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double
 	for(size_t mContourIndex = 0; mContourIndex < mContours.size() ; ++mContourIndex)
 	{
 
-		//cout << "Contour size: " << contour1->size() << endl;
-		//cout << "Contour: " << *contour << endl;
-		//This gives each contour as an array of points
-
 		vector<Point> currContour1 = mContours[mContourIndex];
 
 		size_t minDistanceIndex = 0;
 
 		double minimumDistance = DBL_MAX;
 
-		//cout << "Contour: " << mContourIndex <<endl;
 		//Iterate through each component and find the max distance to each other component
 
 		for(size_t gtContourIndex = 0; gtContourIndex != gtContours.size(); ++gtContourIndex)
 		{
 			vector<Point> currContour2 = gtContours[gtContourIndex];
 
-			//cout << mContourIndex << " to " << gtContourIndex;
 			double currMinDist = MinDist(currContour1,currContour2);
-			//cout << gtContourIndex << " to " << mContourIndex;
 			double currMinDist2 = MinDist(currContour2,currContour1);
-
 			double hausDist = max(currMinDist,currMinDist2);
-			//cout << "Hausdorff Distance: " << hausDist << endl;;
 
 			if(hausDist < minimumDistance)
 			{
@@ -378,15 +317,12 @@ void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double
 
 			if (gtContourIndex == gtContours.size() - 1)
 			{
-				//cout << "Match Distance: " << minimumDistance << " @ Index: " << minDistanceIndex+1 << endl;
+				cout << "Match Distance: " << minimumDistance << " @ Index: " << minDistanceIndex+1 << endl;
 				maxDists1to2.push_back(pair<size_t,double>(minDistanceIndex+1,minimumDistance));
 			}
 
 
-			//distances.push_back(pair<size_t,double>(maxDistanceIndex,maxDistanceSoFar));
 		}
-		//distances.push_back(pair<size_t,double>(maxDistanceIndex,minimumDistance));
-		//iterate over vector to find the minimum distance and the associated component
 
 	}
 	//Apply minimizing (if flagged) and return Maps1to2
@@ -412,10 +348,6 @@ void Image :: HausdorffConstraint(int *HausdorffMap1to2, int MinimizeFlag,double
 				}
 
 	}
-    //for(unsigned int k = 0; k < gtContours.size(); k++)
-
-
-	//ColorMapTest(HausdorffMap1to2,"Hausdorff");
 
 }
 
@@ -436,184 +368,15 @@ void Image :: SetDistanceConstraint()
 */
 
 
-void Image :: ColorMap()
+
+void Image :: ColorMap(int *Matches, string NameofConstraint)
 {
+// Apply color map to matching components and displays output image
+// Runs per constraint, input array of matches and name of constraint (for labelling)
+// Improve this by ensuring all components that match multiple components have the same colors
 
-	int CentroidMatch[mContours.size()];
-	int HausdorffMatch[gtContours.size()];
-	//CentroidConstraint(CentroidMatch);
-	//HausdorffConstraint(HausdorffMatch,1,200.00);
-    SingleImageComps(NMethods,blobs2);
-    SingleImageComps(NGrndtrth,blobs1);
-    unsigned char r, g, b;
-    int x;
-    int y = 0;
-
-	for(int i=blobs1.size()-1; i >= 0; i--)
-	      {
-		     x = CentroidMatch[blobs1.size() - 1 - i];
-		     switch(x)
-		        {
-		        case 1:
-		    	    r = 255;	//red
-		            g = 0;
-		            b = 0;
-		            break;
-		        case 2:
-		    	    r = 0;
-		            g = 255;	// green
-		            b = 0;
-		            break;
-		        case 3:
-		    	    r = 0;
-		            g = 0;
-		            b = 255;	// blue
-		            break;
-		        case 4:
-		    	     r = 255;	// yellow
-		             g = 255;
-		             b = 0;
-		             break;
-		        case 5:
-		    	     r = 255;   // purple
-		             g = 0;
-		             b = 255;
-		             break;
-		        case 6:
-		    	     r = 0;		// turqoise
-		             g = 255;
-		             b = 255;
-		             break;
-		        case 7:
-		    	     r = 255;	//  white
-		             g = 255;
-		             b = 255;
-		             break;
-		        case 8:
-		    	     r = 255;			// Orange
-		             g = 153;
-		             b = 0;
-		             break;
-		        case 9:
-		    	     r = 255;		// Pink
-		             g = 102;
-		             b = 153;
-		             break;
-		        case 0:
-		    	     r = 0;			// Black
-		             g = 0;
-		             b = 0;
-		             break;
-		        default:
-		        	r = 255 * (rand()/(1.0 + RAND_MAX));
-		        	g = 255 * (rand()/(1.0 + RAND_MAX));
-		        	b = 255 * (rand()/(1.0 + RAND_MAX));
-		        	break;
-		        }
-
-	         for(size_t j=0; j < blobs1[i].size(); j++)
-	           {
-	                int x = blobs1[i][j].x;
-	                int y = blobs1[i][j].y;
-
-	                NormGrndtrth.at<Vec3b>(y,x)[0] = b;
-	                NormGrndtrth.at<Vec3b>(y,x)[1] = g;
-	                NormGrndtrth.at<Vec3b>(y,x)[2] = r;
-	            }
-
-	        }
-//-----------------------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------------
-	    for(int i=blobs2.size()-1; i >= 0; i--)
-	      {
-	    	y++;
-	    	switch(y)
-		        {
-		        case 1:
-		    	    r = 255;	//red
-		            g = 0;
-		            b = 0;
-		            break;
-		        case 2:
-		    	    r = 0;
-		            g = 255;	// green
-		            b = 0;
-		            break;
-		        case 3:
-		    	    r = 0;
-		            g = 0;
-		            b = 255;	// blue
-		            break;
-		        case 4:
-		    	     r = 255;	// yellow
-		             g = 255;
-		             b = 0;
-		             break;
-		        case 5:
-		    	     r = 255;   // purple
-		             g = 0;
-		             b = 255;
-		             break;
-		        case 6:
-		    	     r = 0;		// turqoise
-		             g = 255;
-		             b = 255;
-		             break;
-		        case 7:
-		    	     r = 255;	//  white
-		             g = 255;
-		             b = 255;
-		             break;
-		        case 8:
-		    	     r = 255;			// Orange
-		             g = 153;
-		             b = 0;
-		             break;
-		        case 9:
-		    	     r = 255;		// Pink
-		             g = 102;
-		             b = 153;
-		             break;
-		        case 0:
-		    	     r = 0;			// Black
-		             g = 0;
-		             b = 0;
-		             break;
-		        default:
-		        	r = 255 * (rand()/(1.0 + RAND_MAX));
-		        	g = 255 * (rand()/(1.0 + RAND_MAX));
-		        	b = 255 * (rand()/(1.0 + RAND_MAX));
-		        	break;
-		        }
-
-
-	          for(size_t j=0; j < blobs2[i].size(); j++)
-	            {
-	                int x = blobs2[i][j].x;
-	                int y = blobs2[i][j].y;
-
-	                NormMethods.at<Vec3b>(y,x)[0] = b;
-	                NormMethods.at<Vec3b>(y,x)[1] = g;
-	                NormMethods.at<Vec3b>(y,x)[2] = r;
-	            }
-	        }
-
-		for(unsigned int k = 0; k < gtContours.size(); k++)
-		{
-			cout << "Component " << (k+1) << ":" << endl;
-			cout << "	Centroid Match: " << CentroidMatch[k] << endl;
-	       	cout <<"	HausdorffMatch: " << HausdorffMatch[k] << endl;
-		}
-}
-
-void Image :: ColorMapTest(int *Matches, string NameofConstraint)
-{
-
-	//TODO: Accept vector of arrays as input
-
-	//FIX: Weird match on 20110113 image (Hausdorff) - Related to that image?
-
-
+	//colorWheel is a list of colors to iterate through. The last elements are random and should be defined as specific colors to prevent
+	//high numbered components from having different colors
 	Scalar colorWheel[]={Scalar(255,0,0),Scalar(0,255,0),Scalar(0,0,255),Scalar(255,255,0),Scalar(255,0,255),Scalar(0,255,255),Scalar(255,255,255),Scalar(255,153,0),Scalar(255,102,153),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255),Scalar(rand()%255,rand()%255,rand()%255)};
 
 
@@ -632,8 +395,8 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 
 	  for( size_t i = 0; i< mContours.size(); i++ )
 	     {
-	      Scalar color = Scalar (colorWheel[(int)i]);
-		  //Scalar color = Scalar(rand()%255,rand()%155,rand()%255);
+	      Scalar color = Scalar (colorWheel[(int)i]); //choose next color from colorWheel
+
 	      ss.str("");
 	      ss.clear();
 	      ss << "Component " << i+1;
@@ -659,16 +422,18 @@ void Image :: ColorMapTest(int *Matches, string NameofConstraint)
 	  namedWindow( "Legend ("+NameofConstraint+")", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	  imshow( "Legend ("+NameofConstraint+")", Legend );  //
 
-	  //Write the images to files
-	  imwrite("methods-"+NameofConstraint+".png",MapMethods);
-	  imwrite("grndtrth-"+NameofConstraint+".png",MapGrndtrth);
-	  imwrite("legend-"+NameofConstraint+".png",Legend);
-//	    cout << endl << methods << endl;
-
+	  //Uncomment the following lines to write the images to files
+	  //imwrite("methods-"+NameofConstraint+".png",MapMethods);
+	  //imwrite("grndtrth-"+NameofConstraint+".png",MapGrndtrth);
+	  //imwrite("legend-"+NameofConstraint+".png",Legend);
 
 }
 void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet, int MatchAll)
 {
+// Calls ColorMap to display matches for selected constraints
+// Also computes matches for all selected constraints
+// Constraint parameters are selected in here!
+
 	int HausdorffMap1to2[mContours.size()];
 	int CentroidMap1to2[mContours.size()];
 	int SetMap1to2[mContours.size()];
@@ -676,14 +441,23 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 
 	if (MatchCentroid == 1)
 	{
-		CentroidConstraint(CentroidMap1to2,1,100.00);
-		ColorMapTest(CentroidMap1to2,"Centroid");
+		//Set Centroid parameters here!
+		CentroidConstraint(CentroidMap1to2,0,20.00);
+		ColorMap(CentroidMap1to2,"Centroid");
 	}
 	if (MatchHausdorff == 1)
 	{
-		HausdorffConstraint(HausdorffMap1to2,1,75.00);
-		ColorMapTest(HausdorffMap1to2,"Hausdorff");
+		//Set Hausdorff parameters here!
+		HausdorffConstraint(HausdorffMap1to2,0,75.00);
+		ColorMap(HausdorffMap1to2,"Hausdorff");
 	}
+/*	if (MatchSet == 1)
+	{
+		//Set Set Distance parameters here!
+		SetDistanceConstraint(SetMap1to2,0,75.00);
+		ColorMap(SetMap1to2,"Set Distance");
+	}*/
+
 
 	if (MatchAll == 1)
 	{
@@ -781,27 +555,12 @@ void Image :: DisplayMatches(int MatchCentroid, int MatchHausdorff, int MatchSet
 
 		}
 
-		ColorMapTest(AllMap1to2,"All");
+		ColorMap(AllMap1to2,"All");
 	}
 
 }
 
 
-int Image :: Display()
-{
-
-
-		namedWindow( "Centroid Match2", CV_WINDOW_AUTOSIZE );// Create a window for display.
-	    imshow( "Centroid Match2", NormMethods );  // Show our image inside it.
-	    namedWindow( "Centroid Match1", CV_WINDOW_AUTOSIZE );// Create a window for display.
-	    imshow( "Centroid Match1", NormGrndtrth );  //
-
-
-//	    cout << endl << methods << endl;
-	    waitKey(0);      // Wait for a keystroke in the window
-
-	    return 0;
-}
 
 
 
